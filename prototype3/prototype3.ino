@@ -1,17 +1,57 @@
 #include <Wire.h>
 #include "Qwiic_LED_Stick.h"
 
-LED LEDStick;
+typedef enum
+{
+  INIT,
+  MIN,
+  MAX,
+  SENS,
+} control_state_t;
 
-int potInput1 = A1;
+LED LEDStick1;
+
+int buttonInput1 = 0;
+
+control_state_t conState1 = INIT;
+int potInput1 = A1; //15
+int sensorInput1 = A6; //20
+int motorOutput1 = 14;
+
 int potValue1 = 0;
 int ledValue1 = 0;
 int last_ledValue1 = 0;
 
+void led_stick(LED *led, control_state_t state, int value){  
+  if(value < 0){
+    led.LEDOff();
+  }
+
+  switch(state){
+    case MIN:
+      LEDStick1.LEDOff();
+      LEDStick1.setLEDColor(ledValue1, 255, 0, 0);
+      break;
+    case MAX:
+      LEDStick1.LEDOff();
+      LEDStick1.setLEDColor(ledValue1, 0, 255, 0);
+      break;
+    case SENS:
+      LEDStick1.LEDOff();
+      LEDStick1.setLEDColor(ledValue1, 0, 0, 255);
+      break;
+    default:
+      LEDStick1.LEDOff();
+      LEDStick1.setLEDColor(ledValue1, 100, 100, 100);
+      break;
+  }
+
+}
+
 void setup() {
   Wire.begin();
   Serial.begin(115200);
-  if (LEDStick.begin() == false){
+  if (LEDStick1.begin() == false){
     Serial.println("Qwiic LED Stick failed to begin. Please check wiring and try again!");
     //while(1);
   }
@@ -64,25 +104,25 @@ void loop() {
   if(last_ledValue1 != ledValue1){
     Serial.print("change\n");
     if(ledValue1 == -1){
-      LEDStick.LEDOff();
+      LEDStick1.LEDOff();
     }else{
-      LEDStick.LEDOff();
-      LEDStick.setLEDColor(ledValue1, 255, 0, 0);
+      LEDStick1.LEDOff();
+      LEDStick1.setLEDColor(ledValue1, 255, 0, 0);
     }
     last_ledValue1 = ledValue1;
   }
 
   // for (int i = 0; i <= 10; i++){
   //   if(i == ledValue1){
-  //     LEDStick.setLEDBrightness(i, 30);
-  //     LEDStick.setLEDColor(i, 255, 0, 0);
+  //     LEDStick1.setLEDBrightness(i, 30);
+  //     LEDStick1.setLEDColor(i, 255, 0, 0);
   //   }else{
-  //     LEDStick.setLEDBrightness(i, 0);
-  //     //LEDStick.setLEDColor(i, 0, 0, 0);
+  //     LEDStick1.setLEDBrightness(i, 0);
+  //     //LEDSt1.setLEDColor(i, 0, 0, 0);
   //   }
   // }
-  //Serial.print(potValue1);
-  //Serial.print("\n");
+  Serial.print(potValue1);
+  Serial.print("\n");
 
   delay(1);
 }
