@@ -15,15 +15,17 @@ int buttonInput1 = 0;
 int buttonState1 = LOW;
 
 control_state_t conState1 = MIN;
+control_state_t last_conState1 = MIN;
 int potInput1 = A1; //15
 int sensorInput1 = A6; //20
 int motorOutput1 = 14;
 
 int potValue1 = 0;
 int ledValue1 = -1;
+int sensorValue1 = 0;
 int last_ledValue1 = 0;
 
-int cycle_state(state){
+control_state_t cycle_state(control_state_t state){
   switch(state){
     case INIT:
       return MIN;
@@ -86,7 +88,6 @@ void led_stick(LED &led, control_state_t state, int value){
 
   switch(state){
     case MIN:
-      Serial.print("here\n");
       led.LEDOff();
       led.setLEDColor(value, 255, 0, 0);
       break;
@@ -118,16 +119,27 @@ void setup() {
 }
 
 void loop() {
+  sensorValue1 = analogRead(sensorInput1);
+
+  //button check (could be thread)
   buttonState1 = digitalRead(buttonInput1);
+  Serial.print(sensorValue1);
+  Serial.print("\n");
   if(buttonState1 == HIGH){
     conState1 = cycle_state(conState1);
     Serial.print(conState1);
+    Serial.print("\n");
+    led_stick(LEDStick1,conState1,ledValue1);
     delay(1000);
   }
 
-  potValue1 = analogRead(potInput1);
-  ledValue1 = get_led_value(potValue1);
-
+  if(conState1 == SENS){
+    ledValue1 = get_led_value(sensorValue1);
+  }else{
+    potValue1 = analogRead(potInput1);
+    ledValue1 = get_led_value(potValue1);
+  }
+  
   if(last_ledValue1 != ledValue1){
     Serial.print(ledValue1);
     led_stick(LEDStick1,conState1,ledValue1);
