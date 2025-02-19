@@ -1,6 +1,8 @@
 #include <Wire.h>
 #include "Qwiic_LED_Stick.h"
 
+#define SENS_COEF_1 30
+
 typedef enum
 {
   INIT,
@@ -24,6 +26,10 @@ int potValue1 = 0;
 int ledValue1 = -1;
 int sensorValue1 = 0;
 int last_ledValue1 = 0;
+
+int maxDepres1 = 0;
+int minDepres1 = 0;
+int sens1 = 512; //min 0, max 1024
 
 control_state_t cycle_state(control_state_t state){
   switch(state){
@@ -84,27 +90,26 @@ int get_led_value(int pot_value){
 void led_stick(LED &led, control_state_t state, int value){  
   if(value < 0){
     led.LEDOff();
+  }else{
+    switch(state){
+      case MIN:
+        led.LEDOff();
+        led.setLEDColor(value, 255, 0, 0);
+        break;
+      case MAX:
+        led.LEDOff();
+        led.setLEDColor(value, 0, 255, 0);
+        break;
+      case SENS:
+        led.LEDOff();
+        led.setLEDColor(value, 0, 0, 255);
+        break;
+      default:
+        led.LEDOff();
+        led.setLEDColor(value, 100, 100, 100);
+        break;
+    }
   }
-
-  switch(state){
-    case MIN:
-      led.LEDOff();
-      led.setLEDColor(value, 255, 0, 0);
-      break;
-    case MAX:
-      led.LEDOff();
-      led.setLEDColor(value, 0, 255, 0);
-      break;
-    case SENS:
-      led.LEDOff();
-      led.setLEDColor(value, 0, 0, 255);
-      break;
-    default:
-      led.LEDOff();
-      led.setLEDColor(value, 100, 100, 100);
-      break;
-  }
-
 }
 
 void setup() {
@@ -120,11 +125,13 @@ void setup() {
 
 void loop() {
   sensorValue1 = analogRead(sensorInput1);
+  sensorValue1 = sensorValue1 * sens1;
+  //actuate
+  
 
   //button check (could be thread)
   buttonState1 = digitalRead(buttonInput1);
-  Serial.print(sensorValue1);
-  Serial.print("\n");
+  
   if(buttonState1 == HIGH){
     conState1 = cycle_state(conState1);
     Serial.print(conState1);
@@ -133,8 +140,13 @@ void loop() {
     delay(1000);
   }
 
+  potValue1 = analogRead(potInput1);
+
   if(conState1 == SENS){
+    sens1 = log(potValue1 / SENS_COEF_1) + 1);
     ledValue1 = get_led_value(sensorValue1);
+    Serial.print(sensorValue1);
+    Serial.print("\n");
   }else{
     potValue1 = analogRead(potInput1);
     ledValue1 = get_led_value(potValue1);
@@ -146,7 +158,6 @@ void loop() {
 
     last_ledValue1 = ledValue1;
   }
-
 
 
   //Serial.print(potValue1);
