@@ -57,11 +57,11 @@ control_state_t cycle_state(control_state_t state){
 }
 
 void get_sensor_inputs(){
-
+  
 }
 
 void get_pot_inputs(){
-  
+
 }
 
 int get_led_value(int pot_value){
