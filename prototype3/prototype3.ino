@@ -39,7 +39,7 @@ int ledValue1 = -1;
 int sensorValue1 = 0;
 int last_ledValue1 = 0;
 
-int maxDepres1 = 0;
+int maxDepres1 = 179;
 int minDepres1 = 0;
 int sens1 = 0; //min 0, max 1024
 int pos1 = 0;
@@ -60,7 +60,7 @@ void cycle_conState1(){
        conState1 = MIN;
        break;
   }
-  led_stick(LEDStick1,conState1,ledValue1);
+  //led_stick(LEDStick1,conState1,ledValue1);
   //delay(1000);
 }
 
@@ -68,7 +68,7 @@ void cycle_conState1(){
 
 
 
-int get_led_value(int pot_value){
+int get_led_value(int pot_value, ){
   int led_value;
 
   switch (pot_value / 100) {
@@ -111,26 +111,32 @@ int get_led_value(int pot_value){
   return led_value;
 }
 
-void led_stick(LED &led, control_state_t state, int value){  
-  if(value < 0){
+void led_stick(LED &led, control_state_t state, int min, int max, int sens){  
+  if(min == max && min != -1){
+    
+  }
+  
+  if(min < 0 && max < 0 && sens < 0){
     led.LEDOff();
   }else{
     switch(state){
       case MIN:
         led.LEDOff();
-        led.setLEDColor(value, 255, 0, 0);
+        led.setLEDColor(min, 255, 0, 0);
+        led.setLEDColor(max, 0, 255, 0);
         break;
       case MAX:
         led.LEDOff();
-        led.setLEDColor(value, 0, 255, 0);
+        led.setLEDColor(min, 255, 0, 0);
+        led.setLEDColor(max, 0, 255, 0);
         break;
       case SENS:
         led.LEDOff();
-        led.setLEDColor(value, 0, 0, 255);
+        led.setLEDColor(sens, 0, 0, 255);
         break;
       default:
         led.LEDOff();
-        led.setLEDColor(value, 100, 100, 100);
+        led.setLEDColor(5, 100, 100, 100);
         break;
     }
   }
@@ -150,8 +156,8 @@ void sustain_control(){
   }
 
   if(susState1 == TOGGLE && sensorValue1 > TOGGLE_THRESH){
-    //Serial.print("HERE");
-    pos1 = map(sensorValue1,0,1023,0,179);
+    pos1 = map(sensorValue1,0,1023,minDepres1,maxDepres1);
+    Serial.println(pos1);
     servo1.write(pos1);
     delay(1); 
   }else{
@@ -169,6 +175,9 @@ void get_sensor_inputs(){
 
 void get_pot_inputs(){
   static int old_sens1 = 512;
+  static int old_maxDepres1 = 180;
+  static int old_minDepres1 = 0;
+
   static int last_potValue1;
   int loc_potValue1;
 
@@ -176,12 +185,23 @@ void get_pot_inputs(){
   if(loc_potValue1 != last_potValue1){
     potValue1 = loc_potValue1;
     if(conState1 == SENS){
+      minDepres1 = old_minDepres1;
+      maxDepres1 = old_maxDepres1;
       sens1 = log((potValue1 / SENS_COEF_1) + 1);
-      Serial.println(sens1);
+      //Serial.println(sens1);
       old_sens1 = sens1;
-    }else{
+    }else if(conState1 == MAX){
       sens1 = old_sens1;
+      minDepres1 = old_minDepres1;
+      maxDepres1 = map(potValue1,0,1023,minDepres1,179);
+      old_maxDepres1 = maxDepres1;
+    }else if(conState1 == MIN){
+      minDepres1 = old_minDepres1;
+      sens1 = old_sens1;
+      minDepres1 = map(potValue1,0,1023,0,maxDepres1);
+      old_minDepres1 = minDepres1;
     }
+    last_potValue1 = loc_potValue1;
   }
 }
 
@@ -209,17 +229,13 @@ void loop() {
   //Serial.println(sensorValue1);
   sustain_control();
   
-  if(conState1 == SENS){
-    ledValue1 = get_led_value(sensorValue1);
-  }else{
-    ledValue1 = get_led_value(potValue1);
-  }
+  // if(conState1 == SENS){
+  //   ledValue1 = get_led_value(sensorValue1);
+  // }else{
+  //   ledValue1 = get_led_value(potValue1);
+  // }
 
-  if(last_ledValue1 != ledValue1){
-    led_stick(LEDStick1,conState1,ledValue1);
-    last_ledValue1 = ledValue1;
-  }
-
+  led_stick(LEDStick1,conState1,get_led_value(minDepres1),get_led_value(maxDepres1),get_led_value(sensorValue1));
 
   delay(1);
 }
