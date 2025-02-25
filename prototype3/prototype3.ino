@@ -4,11 +4,12 @@
 #include "TeensyThreads.h"
 #include "Qwiic_LED_Stick.h"
 
-#define SENS_COEF_1 30
+#define SENS_COEF_1 200
 
 #define INITIAL_THRESH 1 
 #define WAITING_THRESH 50
 #define TOGGLE_THRESH 600
+#define POT_CHANGE 10
 
 typedef enum {
   WAITING, INITIAL_PRESS, TOGGLE,
@@ -25,6 +26,8 @@ typedef enum
 PWMServo servo1;
 LED LEDStick1;
 
+int ledStickOutput1 = 10;
+
 int buttonInput1 = 0;
 int buttonState1 = LOW;
 
@@ -39,13 +42,17 @@ int ledValue1 = -1;
 int sensorValue1 = 0;
 int last_ledValue1 = 0;
 
-int maxDepres1 = 179;
+int maxDepres1 = 170;
 int minDepres1 = 0;
 int sens1 = 0; //min 0, max 1024
 int pos1 = 0;
 sustain_state_t susState1 = WAITING;
 
 void cycle_conState1(){
+  static unsigned long last_interrupt_time = 0;
+  unsigned long interrupt_time = millis();
+  if (interrupt_time - last_interrupt_time > 200) 
+  {
   switch(conState1){
     case INIT:
       conState1 = MIN;
@@ -60,6 +67,8 @@ void cycle_conState1(){
        conState1 = MIN;
        break;
   }
+  }
+  last_interrupt_time = interrupt_time;
   //led_stick(LEDStick1,conState1,ledValue1);
   //delay(1000);
 }
@@ -68,61 +77,66 @@ void cycle_conState1(){
 
 
 
-int get_led_value(int input_value){
+int get_led_value(int input_value, int state){
   int led_value;
 
-  if(input_value < 2){
-    led_value = -1;
+  if(state == SENS){
+    led_value = map(input_value,0,1023,0,9);
   }else{
-    led_value = map(input_value,2,179,0,9);
-  }
 
-  // switch (pot_value / 100) {
-  //   case 0:
-  //       if (pot_value < 2) {
-  //           led_value = -1;
-  //       } else {
-  //           led_value = 0;
-  //       }
-  //       break;
-  //   case 1:
-  //       led_value = 1;
-  //       break;
-  //   case 2:
-  //       led_value = 2;
-  //       break;
-  //   case 3:
-  //       led_value = 3;
-  //       break;
-  //   case 4:
-  //       led_value = 4;
-  //       break;
-  //   case 5:
-  //       led_value = 5;
-  //       break;
-  //   case 6:
-  //       led_value = 6;
-  //       break;
-  //   case 7:
-  //       led_value = 7;
-  //       break;
-  //   case 8:
-  //       led_value = 8;
-  //       break;
-  //   default:
-  //       led_value = 9;
-  //       break;
-  // }
+  switch (input_value / 18) {
+    case 0:
+        if (input_value < 2) {
+            led_value = -1;
+        } else {
+            led_value = 0;
+        }
+        break;
+    case 1:
+        led_value = 1;
+        break;
+    case 2:
+        led_value = 2;
+        break;
+    case 3:
+        led_value = 3;
+        break;
+    case 4:
+        led_value = 4;
+        break;
+    case 5:
+        led_value = 5;
+        break;
+    case 6:
+        led_value = 6;
+        break;
+    case 7:
+        led_value = 7;
+        break;
+    case 8:
+        led_value = 8;
+        break;
+    default:
+        led_value = 9;
+        break;
+  }
+  }
   
   return led_value;
 }
 
 void led_stick(LED &led, control_state_t state, int min, int max, int sens){  
-  if(min == max && min != -1 && max != 9){
-    max = max + 1;
-  }else if(max == 9){
-    min = min - 1;
+  if(min == max){
+    if(max != 9){
+      max = max + 1;
+    }else if(max == 9){
+      min = 8;
+    }
   }
+  
+  // if(min == max && max == 9){
+  //   min = min - 1;
+  // }
   
   if(min < 0 && max < 0 && sens < 0){
     led.LEDOff();
@@ -131,7 +145,7 @@ void led_stick(LED &led, control_state_t state, int min, int max, int sens){
       case MIN:
         led.LEDOff();
         led.setLEDColor(min, 124, 0, 0);
-        led.setLEDColor(max, 0, 124, 0);
+        led.setLEDColor(max, 0, 124, 124);
         // Serial.print("MIN ");
         // Serial.print(min);
         // Serial.print("MAX ");
@@ -140,7 +154,7 @@ void led_stick(LED &led, control_state_t state, int min, int max, int sens){
       case MAX:
         led.LEDOff();
         led.setLEDColor(min, 124, 0, 0);
-        led.setLEDColor(max, 0, 124, 0);
+        led.setLEDColor(max, 0, 124, 124);
         // Serial.print("MIN ");
         // Serial.print(min);
         // Serial.print("MAX ");
@@ -199,7 +213,7 @@ void get_pot_inputs(){
 
   loc_potValue1 = analogRead(potInput1);
   //Serial.println(loc_potValue1);
-  if(loc_potValue1 != last_potValue1){
+  if(abs(loc_potValue1 - last_potValue1) > POT_CHANGE){
     potValue1 = loc_potValue1;
     if(conState1 == SENS){
       minDepres1 = old_minDepres1;
@@ -227,6 +241,8 @@ void setup() {
   Serial.begin(115200);
 
   pinMode(buttonInput1,INPUT);
+  pinMode(ledStickOutput1,OUTPUT);
+  digitalWrite(ledStickOutput1,HIGH);
   servo1.attach(motorOutput1);
 
   attachInterrupt(digitalPinToInterrupt(buttonInput1), cycle_conState1, RISING);
@@ -236,6 +252,8 @@ void setup() {
     while(1);
   }
 
+  LEDStick1.setLEDBrightness(5);
+  led_stick(LEDStick1,MIN,0,9,0);
   Serial.println("Qwiic LED Stick ready!");
 }
 
@@ -243,17 +261,10 @@ void loop() {
   get_sensor_inputs();
   get_pot_inputs();
 
-  //Serial.println(sensorValue1);
+  Serial.println(sensorValue1);
   sustain_control();
   
-  // if(conState1 == SENS){
-  //   ledValue1 = get_led_value(sensorValue1);
-  // }else{
-  //   ledValue1 = get_led_value(potValue1);
-  // }
+  led_stick(LEDStick1,conState1,get_led_value(minDepres1,conState1),get_led_value(maxDepres1,conState1),get_led_value(sensorValue1,conState1));
 
-  Serial.println(minDepres1);
-  led_stick(LEDStick1,conState1,get_led_value(minDepres1),get_led_value(maxDepres1),get_led_value(sensorValue1));
-
-  delay(1);
+  delay(10);
 }
