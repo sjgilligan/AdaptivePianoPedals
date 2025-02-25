@@ -38,13 +38,13 @@ int sensorInput1 = A6; //20
 int motorOutput1 = 14;
 
 int potValue1 = 0;
-int ledValue1 = -1;
+//int ledValue1 = -1;
 int sensorValue1 = 0;
-int last_ledValue1 = 0;
+//int last_ledValue1 = 0;
 
-int maxDepres1 = 170;
+int maxDepres1 = 179;
 int minDepres1 = 0;
-int sens1 = 0; //min 0, max 1024
+int sens1 = 1; //min 0, max 1024
 int pos1 = 0;
 sustain_state_t susState1 = WAITING;
 
@@ -134,18 +134,15 @@ void led_stick(LED &led, control_state_t state, int min, int max, int sens){
     }
   }
   
-  // if(min == max && max == 9){
-  //   min = min - 1;
-  // }
-  
   if(min < 0 && max < 0 && sens < 0){
     led.LEDOff();
   }else{
     switch(state){
       case MIN:
         led.LEDOff();
+        
+        led.setLEDColor(max, 0, 0, 124);
         led.setLEDColor(min, 124, 0, 0);
-        led.setLEDColor(max, 0, 124, 124);
         // Serial.print("MIN ");
         // Serial.print(min);
         // Serial.print("MAX ");
@@ -153,8 +150,9 @@ void led_stick(LED &led, control_state_t state, int min, int max, int sens){
         break;
       case MAX:
         led.LEDOff();
+        
+        led.setLEDColor(max, 0, 0, 124);
         led.setLEDColor(min, 124, 0, 0);
-        led.setLEDColor(max, 0, 124, 124);
         // Serial.print("MIN ");
         // Serial.print(min);
         // Serial.print("MAX ");
@@ -204,9 +202,9 @@ void get_sensor_inputs(){
 }
 
 void get_pot_inputs(){
-  static int old_sens1 = 512;
-  static int old_maxDepres1 = 180;
-  static int old_minDepres1 = 0;
+  // static int old_sens1 = 1;
+  // static int old_maxDepres1 = 179;
+  // static int old_minDepres1 = 0;
 
   static int last_potValue1;
   int loc_potValue1;
@@ -216,21 +214,26 @@ void get_pot_inputs(){
   if(abs(loc_potValue1 - last_potValue1) > POT_CHANGE){
     potValue1 = loc_potValue1;
     if(conState1 == SENS){
-      minDepres1 = old_minDepres1;
-      maxDepres1 = old_maxDepres1;
-      sens1 = log((potValue1 / SENS_COEF_1) + 1);
+      // minDepres1 = old_minDepres1;
+      // maxDepres1 = old_maxDepres1;
+      //sens1 = log((potValue1 / SENS_COEF_1) + 1);
+      if(potValue1 < 5){
+        sens1 = 0;
+      }else{
+        sens1 = map(potValue1,0,1024,1,5);
+      }
       //Serial.println(sens1);
-      old_sens1 = sens1;
+      //old_sens1 = sens1;
     }else if(conState1 == MAX){
-      sens1 = old_sens1;
-      minDepres1 = old_minDepres1;
+      // sens1 = old_sens1;
+      // minDepres1 = old_minDepres1;
       maxDepres1 = map(potValue1,0,1023,minDepres1,179);
-      old_maxDepres1 = maxDepres1;
+      //old_maxDepres1 = maxDepres1;
     }else if(conState1 == MIN){
-      minDepres1 = old_minDepres1;
-      sens1 = old_sens1;
+      // maxDepres1 = old_maxDepres1;
+      // sens1 = old_sens1;
       minDepres1 = map(potValue1,0,1023,0,maxDepres1);
-      old_minDepres1 = minDepres1;
+      //old_minDepres1 = minDepres1;
     }
     last_potValue1 = loc_potValue1;
   }
@@ -253,7 +256,7 @@ void setup() {
   }
 
   LEDStick1.setLEDBrightness(5);
-  led_stick(LEDStick1,MIN,0,9,0);
+  //led_stick(LEDStick1,MIN,0,9,0);
   Serial.println("Qwiic LED Stick ready!");
 }
 
@@ -261,7 +264,7 @@ void loop() {
   get_sensor_inputs();
   get_pot_inputs();
 
-  Serial.println(sensorValue1);
+  Serial.println(pos1);
   sustain_control();
   
   led_stick(LEDStick1,conState1,get_led_value(minDepres1,conState1),get_led_value(maxDepres1,conState1),get_led_value(sensorValue1,conState1));
