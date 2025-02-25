@@ -68,52 +68,60 @@ void cycle_conState1(){
 
 
 
-int get_led_value(int pot_value, ){
+int get_led_value(int input_value){
   int led_value;
 
-  switch (pot_value / 100) {
-    case 0:
-        if (pot_value < 2) {
-            led_value = -1;
-        } else {
-            led_value = 0;
-        }
-        break;
-    case 1:
-        led_value = 1;
-        break;
-    case 2:
-        led_value = 2;
-        break;
-    case 3:
-        led_value = 3;
-        break;
-    case 4:
-        led_value = 4;
-        break;
-    case 5:
-        led_value = 5;
-        break;
-    case 6:
-        led_value = 6;
-        break;
-    case 7:
-        led_value = 7;
-        break;
-    case 8:
-        led_value = 8;
-        break;
-    default:
-        led_value = 9;
-        break;
+  if(input_value < 2){
+    led_value = -1;
+  }else{
+    led_value = map(input_value,2,179,0,9);
   }
+
+  // switch (pot_value / 100) {
+  //   case 0:
+  //       if (pot_value < 2) {
+  //           led_value = -1;
+  //       } else {
+  //           led_value = 0;
+  //       }
+  //       break;
+  //   case 1:
+  //       led_value = 1;
+  //       break;
+  //   case 2:
+  //       led_value = 2;
+  //       break;
+  //   case 3:
+  //       led_value = 3;
+  //       break;
+  //   case 4:
+  //       led_value = 4;
+  //       break;
+  //   case 5:
+  //       led_value = 5;
+  //       break;
+  //   case 6:
+  //       led_value = 6;
+  //       break;
+  //   case 7:
+  //       led_value = 7;
+  //       break;
+  //   case 8:
+  //       led_value = 8;
+  //       break;
+  //   default:
+  //       led_value = 9;
+  //       break;
+  // }
   
   return led_value;
 }
 
 void led_stick(LED &led, control_state_t state, int min, int max, int sens){  
-  if(min == max && min != -1){
-    
+  if(min == max && min != -1 && max != 9){
+    max = max + 1;
+  }else if(max == 9){
+    min = min - 1;
   }
   
   if(min < 0 && max < 0 && sens < 0){
@@ -122,17 +130,25 @@ void led_stick(LED &led, control_state_t state, int min, int max, int sens){
     switch(state){
       case MIN:
         led.LEDOff();
-        led.setLEDColor(min, 255, 0, 0);
-        led.setLEDColor(max, 0, 255, 0);
+        led.setLEDColor(min, 124, 0, 0);
+        led.setLEDColor(max, 0, 124, 0);
+        // Serial.print("MIN ");
+        // Serial.print(min);
+        // Serial.print("MAX ");
+        // Serial.println(max);
         break;
       case MAX:
         led.LEDOff();
-        led.setLEDColor(min, 255, 0, 0);
-        led.setLEDColor(max, 0, 255, 0);
+        led.setLEDColor(min, 124, 0, 0);
+        led.setLEDColor(max, 0, 124, 0);
+        // Serial.print("MIN ");
+        // Serial.print(min);
+        // Serial.print("MAX ");
+        // Serial.println(max);
         break;
       case SENS:
         led.LEDOff();
-        led.setLEDColor(sens, 0, 0, 255);
+        led.setLEDColor(sens, 0, 0, 124);
         break;
       default:
         led.LEDOff();
@@ -182,6 +198,7 @@ void get_pot_inputs(){
   int loc_potValue1;
 
   loc_potValue1 = analogRead(potInput1);
+  //Serial.println(loc_potValue1);
   if(loc_potValue1 != last_potValue1){
     potValue1 = loc_potValue1;
     if(conState1 == SENS){
@@ -235,6 +252,7 @@ void loop() {
   //   ledValue1 = get_led_value(potValue1);
   // }
 
+  Serial.println(minDepres1);
   led_stick(LEDStick1,conState1,get_led_value(minDepres1),get_led_value(maxDepres1),get_led_value(sensorValue1));
 
   delay(1);
