@@ -141,7 +141,7 @@ void led_stick(LED &led, control_state_t state, int min, int max, int sens){
       case MIN:
         led.LEDOff();
         
-        led.setLEDColor(max, 0, 0, 124);
+        led.setLEDColor(max, 0, 124, 0);
         led.setLEDColor(min, 124, 0, 0);
         // Serial.print("MIN ");
         // Serial.print(min);
@@ -151,7 +151,7 @@ void led_stick(LED &led, control_state_t state, int min, int max, int sens){
       case MAX:
         led.LEDOff();
         
-        led.setLEDColor(max, 0, 0, 124);
+        led.setLEDColor(max, 0, 124, 0);
         led.setLEDColor(min, 124, 0, 0);
         // Serial.print("MIN ");
         // Serial.print(min);
