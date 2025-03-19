@@ -1,8 +1,9 @@
 #include <Wire.h>
-#include <PWMServo.h>
+#include "Servo.h"
 #include <Arduino.h>
 #include "TeensyThreads.h"
 #include "Qwiic_LED_Stick.h"
+
 
 #define SENS_COEF_1 200
 
@@ -42,10 +43,10 @@ int potValue1 = 0;
 int sensorValue1 = 0;
 //int last_ledValue1 = 0;
 
-int maxDepres1 = 179;
-int minDepres1 = 0;
+int maxDepres1 = 2000;
+int minDepres1 = 1000;
 int sens1 = 1; //min 0, max 1024
-int pos1 = 0;
+int pos1 = 0; //lin servo is 1000-2000
 sustain_state_t susState1 = WAITING;
 
 void cycle_conState1(){
