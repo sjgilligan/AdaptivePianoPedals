@@ -57,18 +57,28 @@ void cycle_conState1(){
   {
   switch(conState1){
     case INIT:
+      while(minDepres1 < map(potValue1,0,1023,0,179)){
+        servo1.write(minDepres1);
+      } 
       conState1 = MIN;
       break;
     case MIN:
+      while(minDepres1 < map(potValue1,0,1023,0,179)){
+        servo1.write(minDepres1);
+      } 
       conState1 = MAX;
       break;
     case MAX:
-       conState1 = SENS;
-       pos1 = 0;
-       break;
+      // while(maxDepres1 < map(potValue1,0,1023,0,179))
+      //   servo1.write(minDepres1);
+      // } 
+      conState1 = SENS;
+      //pos1 = 0;
+      break;
     default:
-       conState1 = MIN;
-       break;
+      servo1.write(minDepres1);
+      conState1 = MIN;
+      break;
   }
   }
   last_interrupt_time = interrupt_time;
@@ -254,10 +264,9 @@ void setup() {
   digitalWrite(ledStickOutput1,HIGH);
   servo1.attach(motorOutput1, 1000, 2000);
 
-  do{
-    servo1.write(0);
-  }while(potValue1 > 10); //wait for user to set pot all the way off
-  delay(10);
+
+  servo1.write(0);
+  delay(1000);
 
   attachInterrupt(digitalPinToInterrupt(buttonInput1), cycle_conState1, RISING);
 
