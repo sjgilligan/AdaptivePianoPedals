@@ -85,7 +85,7 @@ int get_led_value(int input_value, int state){
     led_value = map(input_value,0,1023,0,9);
   }else{
 
-  switch (input_value / 18) {
+  switch (input_value/18) {
     case 0:
         if (input_value < 2) {
             led_value = -1;
@@ -186,11 +186,12 @@ void sustain_control(){
 
   if(susState1 == TOGGLE && sensorValue1 > TOGGLE_THRESH){
     pos1 = map(sensorValue1,0,1023,minDepres1,maxDepres1);
-    Serial.println(pos1);
+    //Serial.println(pos1);
     servo1.write(pos1);
     delay(1); 
   }else{
     susState1 = WAITING;
+    servo1.write(minDepres1);
   }
 
 
@@ -228,12 +229,12 @@ void get_pot_inputs(){
     }else if(conState1 == MAX){
       // sens1 = old_sens1;
       // minDepres1 = old_minDepres1;
-      maxDepres1 = map(potValue1,0,1023,minDepres1,179);
+      maxDepres1 = map(potValue1,0,1023,0,179);
       //old_maxDepres1 = maxDepres1;
     }else if(conState1 == MIN){
       // maxDepres1 = old_maxDepres1;
       // sens1 = old_sens1;
-      minDepres1 = map(potValue1,0,1023,0,maxDepres1);
+      minDepres1 = map(potValue1,0,1023,0,179);
       //old_minDepres1 = minDepres1;
     }
     last_potValue1 = loc_potValue1;
@@ -247,7 +248,10 @@ void setup() {
   pinMode(buttonInput1,INPUT);
   pinMode(ledStickOutput1,OUTPUT);
   digitalWrite(ledStickOutput1,HIGH);
-  servo1.attach(motorOutput1);
+  servo1.attach(motorOutput1, 1000, 2000);
+
+  servo1.write(0);
+  delay(1000);
 
   attachInterrupt(digitalPinToInterrupt(buttonInput1), cycle_conState1, RISING);
 
@@ -265,7 +269,10 @@ void loop() {
   get_sensor_inputs();
   get_pot_inputs();
 
-  Serial.println(pos1);
+
+  char buffer[40];
+  sprintf(buffer,"min: %d, max: %d, sens: %d, pos: %d, pot: %d",minDepres1,maxDepres1,sensorValue1,pos1,potValue1);
+  //Serial.println(buffer);
   sustain_control();
   
   led_stick(LEDStick1,conState1,get_led_value(minDepres1,conState1),get_led_value(maxDepres1,conState1),get_led_value(sensorValue1,conState1));
