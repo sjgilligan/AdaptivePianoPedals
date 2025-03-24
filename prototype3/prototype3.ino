@@ -69,15 +69,11 @@ void cycle_conState1(){
       conState1 = MAX;
       break;
     case MAX:
-      // while(maxDepres1 < map(potValue1,0,1023,0,179))
-      //   servo1.write(minDepres1);
-      // } 
       conState1 = SENS;
-      //pos1 = 0;
-      break;
-    default:
       servo1.write(minDepres1);
       conState1 = MIN;
+      break;
+    default:
       break;
   }
   }
