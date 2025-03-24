@@ -3,6 +3,7 @@
 #include <Arduino.h>
 #include "TeensyThreads.h"
 #include "Qwiic_LED_Stick.h"
+#include "Timer.h"
 
 #define SENS_COEF_1 200
 
@@ -20,11 +21,13 @@ typedef enum
   INIT,
   MIN,
   MAX,
+  DURATION,
   SENS,
 } control_state_t;
 
 PWMServo servo1;
 LED LEDStick1;
+Timer sustain_timer;
 
 int ledStickOutput1 = 10;
 
@@ -44,6 +47,7 @@ int sensorValue1 = 0;
 
 int maxDepres1 = 179;
 int minDepres1 = 0;
+int sustain_duration = 1000;
 int sens1 = 1; //min 0, max 1024
 int pos1 = 0;
 sustain_state_t susState1 = WAITING;
@@ -69,11 +73,11 @@ void cycle_conState1(){
       conState1 = MAX;
       break;
     case MAX:
-      conState1 = SENS;
       servo1.write(minDepres1);
-      conState1 = MIN;
+      conState1 = SENS;
       break;
     default:
+      conState1 = MIN;
       break;
   }
   }
@@ -167,6 +171,10 @@ void led_stick(LED &led, control_state_t state, int min, int max, int sens){
         // Serial.print("MAX ");
         // Serial.println(max);
         break;
+	case DURATION:
+		led.LEDOff();
+        led.setLEDColor(sens, 124, 124, 0);
+		break;
       case SENS:
         led.LEDOff();
         led.setLEDColor(sens, 0, 0, 124);
@@ -194,9 +202,17 @@ void sustain_control(){
     }
 
     if(susState1 == TOGGLE && sensorValue1 > TOGGLE_THRESH){
-      pos1 = map(sensorValue1,0,1023,minDepres1,maxDepres1);
+
+      //pos1 = map(sensorValue1,0,1023,minDepres1,maxDepres1);
       //Serial.println(pos1);
-      servo1.write(pos1);
+      //servo1.write(pos1);
+	  
+	  pos1 = maxDepres1;
+	  servo1.write(pos1);
+	  delay(sustain_duration);
+	  
+	  
+
     }else{
       susState1 = WAITING;
       servo1.write(minDepres1);
@@ -247,6 +263,10 @@ void get_pot_inputs(){
         minDepres1 = maxDepres1;
       }
     }
+	}else if(conState1 == DURATION){
+      sensor_activated = true;
+      sustain_duration = map(potValue1,0,1023,0,179);
+	}
     last_potValue1 = loc_potValue1;
   }
 }
