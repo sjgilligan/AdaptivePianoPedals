@@ -13,7 +13,7 @@
 #define POT_CHANGE 10
 
 typedef enum {
-  WAITING, INITIAL_PRESS, TOGGLE,
+  WAITING, INITIAL_PRESS, TOGGLE, DEPRESS
 } sustain_state_t;
 
 typedef enum
@@ -74,7 +74,11 @@ void cycle_conState1(){
       break;
     case MAX:
       servo1.write(minDepres1);
-      conState1 = SENS;
+      conState1 = DURATION;
+      break;
+    case DURATION:
+		  servo1.write(minDepres1);
+		  conState1 = SENS;
       break;
     default:
       conState1 = MIN;
@@ -95,6 +99,8 @@ int get_led_value(int input_value, int state){
 
   if(state == SENS){
     led_value = map(input_value,0,1023,0,9);
+  }else if(state == DEPRESS){
+    led_value = map(input_value,0,4000,0,9);
   }else{
 
   switch (input_value/18) {
@@ -138,7 +144,7 @@ int get_led_value(int input_value, int state){
   return led_value;
 }
 
-void led_stick(LED &led, control_state_t state, int min, int max, int sens){  
+void led_stick(LED &led, control_state_t state, int min, int max, int duration, int sens){  
   if(min == max){
     if(max != 9){
       max = max + 1;
@@ -171,10 +177,10 @@ void led_stick(LED &led, control_state_t state, int min, int max, int sens){
         // Serial.print("MAX ");
         // Serial.println(max);
         break;
-	case DURATION:
-		led.LEDOff();
-        led.setLEDColor(sens, 124, 124, 0);
-		break;
+	    case DURATION:
+		    led.LEDOff();
+        led.setLEDColor(duration, 124, 124, 0);
+		    break;
       case SENS:
         led.LEDOff();
         led.setLEDColor(sens, 0, 0, 124);
@@ -188,6 +194,7 @@ void led_stick(LED &led, control_state_t state, int min, int max, int sens){
 }
 
 void sustain_control(){
+  int sustain_counter = 0;
   if(sensor_activated == true){
     if(susState1 == WAITING && sensorValue1 > 10){
       susState1 = INITIAL_PRESS; //wating -> inital_press
@@ -206,14 +213,17 @@ void sustain_control(){
       //pos1 = map(sensorValue1,0,1023,minDepres1,maxDepres1);
       //Serial.println(pos1);
       //servo1.write(pos1);
-	  
-	  pos1 = maxDepres1;
-	  servo1.write(pos1);
-	  delay(sustain_duration);
-	  
-	  
-
-    }else{
+      susState1 == DEPRESS;
+      //sustain_timer.start();
+      pos1 = maxDepres1;
+    }if(susState1 == DEPRESS && sustain_counter < sustain_duration){
+      Serial.println(sustain_timer.read());
+      servo1.write(pos1);
+      sustain_counter++;
+      delay(1);
+    }else if(susState1 == DEPRESS){
+	    //sustain_timer.stop();
+      sustain_counter = 0;
       susState1 = WAITING;
       servo1.write(minDepres1);
       pos1 = minDepres1;
@@ -262,10 +272,9 @@ void get_pot_inputs(){
       if(minDepres1 > maxDepres1){
         minDepres1 = maxDepres1;
       }
-    }
-	}else if(conState1 == DURATION){
+    }else if(conState1 == DURATION){
       sensor_activated = true;
-      sustain_duration = map(potValue1,0,1023,0,179);
+      sustain_duration = map(potValue1,0,1023,0,4000);
 	}
     last_potValue1 = loc_potValue1;
   }
@@ -302,11 +311,11 @@ void loop() {
 
 
   char buffer[40];
-  sprintf(buffer,"min: %d, max: %d, sens: %d, pos: %d, pot: %d",minDepres1,maxDepres1,sensorValue1,pos1,potValue1);
+  sprintf(buffer,"min: %d, max: %d, sens: %d, pos: %d, pot: %d, state: %d",minDepres1,maxDepres1,sensorValue1,pos1,potValue1,conState1);
   Serial.println(buffer);
   sustain_control();
   
-  led_stick(LEDStick1,conState1,get_led_value(minDepres1,conState1),get_led_value(maxDepres1,conState1),get_led_value(sensorValue1,conState1));
+  led_stick(LEDStick1,conState1,get_led_value(minDepres1,conState1),get_led_value(maxDepres1,conState1),get_led_value(sustain_duration,conState1),get_led_value(sensorValue1,conState1));
 
   delay(10);
 }
