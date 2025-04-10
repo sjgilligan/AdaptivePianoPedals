@@ -342,6 +342,12 @@ void get_touch_sensor_inputs(){
   sensorValue2 = sensorValue2 * sens2;
 }
 
+void get_imu_sensor_inputs(){
+  sensors_event_t a, g, temp;
+  mpu.getEvent(&a, &g, &temp);
+  accelZ = a.acceleration.z;
+}
+
 void get_pot_inputs(){
   // static int old_sens1 = 1;
   // static int old_maxDepres1 = 179;
