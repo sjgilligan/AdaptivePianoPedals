@@ -1,6 +1,8 @@
 #include <Wire.h>
 #include <PWMServo.h>
 #include <Arduino.h>
+#include <Adafruit_MPU6050.h>
+#include <Adafruit_Sensor.h>
 #include "TeensyThreads.h"
 #include "Qwiic_LED_Stick.h"
 #include "Timer.h"
@@ -35,6 +37,12 @@ LED LEDStick2;
 LED LEDStick3;
 Timer sustain_timer;
 
+Adafruit_MPU6050 mpu;
+
+float prevAccelz = 0.0;
+float accelZ;
+float diff;
+
 // int ledStickOutput1 = 10;
 // int ledStickOutput2 = 10;
 // int ledStickOutput3 = 10;
@@ -46,9 +54,9 @@ int buttonState1 = LOW;
 int buttonState2 = LOW;
 int buttonState3 = LOW;
 
-int potInput1 = 15; //15
-int potInput2 = 16;
-int potInput3 = 17;
+int potInput1 = 14; //15
+int potInput2 = 15;
+int potInput3 = 16;
 int potValue1 = 0;
 int potValue2 = 0;
 int potValue3 = 0;
@@ -175,7 +183,7 @@ void cycle_conState3(){
       while(minDepres3 < map(potValue3,0,1023,0,179)){
         servo1.write(minDepres3);
       } 
-      conState2 = MAX;
+      conState3 = MAX;
       break;
     case MAX:
       servo1.write(minDepres3);
@@ -490,10 +498,10 @@ void setup() {
     while(1);
   }
 
-  // if (LEDStick2.begin(0x24) == false){
-  //   Serial.println("Qwiic LED Stick2 failed to begin. Please check wiring and try again!");
-  //   while(1);
-  // }
+  if (LEDStick2.begin(0x24) == false){
+    Serial.println("Qwiic LED Stick2 failed to begin. Please check wiring and try again!");
+    while(1);
+  }
 
   if (LEDStick3.begin(0x23) == false){
     Serial.println("Qwiic LED Stick3 failed to begin. Please check wiring and try again!");
@@ -501,25 +509,35 @@ void setup() {
   }
 
   LEDStick1.setLEDBrightness(5);
-  //LEDStick2.setLEDBrightness(5);
+  LEDStick2.setLEDBrightness(5);
   LEDStick3.setLEDBrightness(5);
   //led_stick(LEDStick1,MIN,0,9,0);
   Serial.println("Qwiic LED Sticks ready!");
 }
 
 void loop() {
-  get_touch_sensor_inputs();
-  get_imu_sensor_inputs();
+  //get_touch_sensor_inputs();
+  //get_imu_sensor_inputs();
 
   get_pot_inputs();
 
-  sustain_control();
-  
-  char buffer[120];
-  sprintf(buffer,"min: %d, max: %d, sens: %d, pos: %d, pot: %d, state: %d, sustain: %d",minDepres1,maxDepres1,sensorValue1,pos1,potValue1,susState1,sustain_duration);
-  Serial.println(buffer);
+  //sustain_control();
+
+  char buffer1[120];
+  sprintf(buffer1,"Pedal1: min: %d, max: %d, sens: %d, pos: %d, pot: %d, con_state: %d, state: %d, sustain: %d",minDepres1,maxDepres1,sensorValue1,pos1,potValue1,conState1,susState1,sustain_duration);
+  Serial.println(buffer1);
+
+  char buffer2[120];
+  sprintf(buffer2,"Pedal2: min: %d, max: %d, sens: %d, pos: %d, pot: %d, con_state: %d",minDepres2,maxDepres2,sensorValue2,pos2,potValue2,conState2);
+  Serial.println(buffer2);
+
+  char buffer3[120];
+  sprintf(buffer3,"Pedal3: min: %d, max: %d, sens: %f, pos: %d, pot: %d, con_state: %d",minDepres3,maxDepres3,diff,pos3,potValue3,conState3);
+  Serial.println(buffer3);
 
   led_stick(LEDStick1,conState1,get_led_value(minDepres1,conState1),get_led_value(maxDepres1,conState1),get_led_value(max_sustain_duration,conState1),get_led_value(sensorValue1,conState1));
+  //led_stick(LEDStick2,conState2,get_led_value(minDepres2,conState2),get_led_value(maxDepres2,conState2),get_led_value(max_sustain_duration,conState2),get_led_value(sensorValue1,conState2));
+  //led_stick(LEDStick1,conState3,get_led_value(minDepres3,conState3),get_led_value(maxDepres3,conState3),get_led_value(max_sustain_duration,conState3),get_led_value(sensorValue1,conState3));
 
   delay(10);
 }

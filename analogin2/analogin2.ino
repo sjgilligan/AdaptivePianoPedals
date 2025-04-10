@@ -16,7 +16,7 @@ enum state_type{
 state_type current_state1 = WAITING;
 
 int servoPin1 = 19;
-int sensorPin = 34;
+int sensorPin = 21;
 int LEDPin = 12;
 
 // int pos1 = 0; //posistion of servo1
@@ -94,16 +94,14 @@ void setup() {
 
   //sensor1Timer.begin(read_sensor1,1000);
 
-  pinMode(LEDPin, OUTPUT);
-  digitalWrite(LEDPin, HIGH);
+  //pinMode(LEDPin, OUTPUT);
+  //digitalWrite(LEDPin, HIGH);
 }
 
 void loop() {
   sensor1Value = analogRead(sensorPin);
-  //Serial.print(sensor1Value);
-  Serial.print(millis());
-  delay(10);
-  Serial.print("\n");
+  Serial.println(sensor1Value);
+
 
   delay(1);
   // put your main code here, to run repeatedly:
