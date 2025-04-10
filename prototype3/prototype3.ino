@@ -27,32 +27,64 @@ typedef enum
 } control_state_t;
 
 PWMServo servo1;
+PWMServo servo2;
+PWMServo servo3;
+
 LED LEDStick1;
+LED LEDStick2;
+LED LEDStick3;
 Timer sustain_timer;
 
-int ledStickOutput1 = 10;
+// int ledStickOutput1 = 10;
+// int ledStickOutput2 = 10;
+// int ledStickOutput3 = 10;
 
 int buttonInput1 = 0;
+int buttonInput2 = 1;
+int buttonInput3 = 2;
 int buttonState1 = LOW;
+int buttonState2 = LOW;
+int buttonState3 = LOW;
+
+int potInput1 = 15; //15
+int potInput2 = 16;
+int potInput3 = 17;
+int potValue1 = 0;
+int potValue2 = 0;
+int potValue3 = 0;
 
 control_state_t conState1 = MIN;
 control_state_t last_conState1 = MIN;
-int potInput1 = A1; //15
-int sensorInput1 = A6; //20
-int motorOutput1 = 14;
 
-int potValue1 = 0;
-//int ledValue1 = -1;
+int sensorInput1 = 21;
+int sensorInput2 = 22;
 int sensorValue1 = 0;
-//int last_ledValue1 = 0;
+int sensorValue2 = 0;
+
+int motorOutput1 = 10;
+int motorOutput2 = 11;
+int motorOutput3 = 12;
 
 int maxDepres1 = 179;
+int maxDepres2 = 179;
+int maxDepres3 = 179;
 int minDepres1 = 0;
+int minDepres2 = 0;
+int minDepres3 = 0;
+
 int sustain_duration = 1000;
 int max_sustain_duration = 4000;
+
 int sens1 = 1; //min 0, max 1024
+int sens2 = 1;
+
 int pos1 = 0;
+int pos2 = 0;
+int pos3 = 0;
+
 sustain_state_t susState1 = WAITING;
+sustain_state_t susState1 = WAITING;
+
 
 bool sensor_activated = true;
 
@@ -92,6 +124,77 @@ void cycle_conState1(){
   //delay(1000);
 }
 
+void cycle_conState2(){
+  static unsigned long last_interrupt_time = 0;
+  unsigned long interrupt_time = millis();
+  if (interrupt_time - last_interrupt_time > 200) 
+  {
+  switch(conState2){
+    case INIT:
+      while(minDepres2 < map(potValue2,0,1023,0,179)){
+        servo1.write(minDepres2);
+      } 
+      conState2 = MIN;
+      break;
+    case MIN:
+      while(minDepres2 < map(potValue2,0,1023,0,179)){
+        servo1.write(minDepres2);
+      } 
+      conState2 = MAX;
+      break;
+    case MAX:
+      servo1.write(minDepres2);
+      conState2 = MAX_DURATION;
+      break;
+    case MAX_DURATION:
+		  servo1.write(minDepres2);
+		  conState2 = SENS;
+      break;
+    default:
+      conState2 = MIN;
+      break;
+  }
+  }
+  last_interrupt_time = interrupt_time;
+  //led_stick(LEDStick1,conState1,ledValue1);
+  //delay(1000);
+}
+
+void cycle_conState3(){
+  static unsigned long last_interrupt_time = 0;
+  unsigned long interrupt_time = millis();
+  if (interrupt_time - last_interrupt_time > 200) 
+  {
+  switch(conState3){
+    case INIT:
+      while(minDepres3 < map(potValue3,0,1023,0,179)){
+        servo1.write(minDepres3);
+      } 
+      conState3 = MIN;
+      break;
+    case MIN:
+      while(minDepres3 < map(potValue3,0,1023,0,179)){
+        servo1.write(minDepres3);
+      } 
+      conState2 = MAX;
+      break;
+    case MAX:
+      servo1.write(minDepres3);
+      conState3 = MAX_DURATION;
+      break;
+    case MAX_DURATION:
+		  servo1.write(minDepres3);
+		  conState3 = SENS;
+      break;
+    default:
+      conState3 = MIN;
+      break;
+  }
+  }
+  last_interrupt_time = interrupt_time;
+  //led_stick(LEDStick1,conState1,ledValue1);
+  //delay(1000);
+}
 
 
 
@@ -234,9 +337,12 @@ void sustain_control(){
 
 }
 
-void get_sensor_inputs(){
+void get_touch_sensor_inputs(){
   sensorValue1 = analogRead(sensorInput1);
   sensorValue1 = sensorValue1 * sens1;
+
+  sensorValue2 = analogRead(sensorInput2);
+  sensorValue2 = sensorValue2 * sens2;
 }
 
 void get_pot_inputs(){
@@ -246,6 +352,12 @@ void get_pot_inputs(){
 
   static int last_potValue1;
   int loc_potValue1;
+
+  static int last_potValue2;
+  int loc_potValue2;
+
+  static int last_potValue3;
+  int loc_potValue3;
 
   loc_potValue1 = analogRead(potInput1);
   //Serial.println(loc_potValue1);
@@ -279,6 +391,72 @@ void get_pot_inputs(){
 	}
     last_potValue1 = loc_potValue1;
   }
+
+  loc_potValue2 = analogRead(potInput2);
+  //Serial.println(loc_potValue2);
+  if(abs(loc_potValue2 - last_potValue2) > POT_CHANGE){
+    potValue2 = loc_potValue2;
+    if(conState2 == SENS){
+      sensor_activated = true;
+      if(potValue2 < 5){
+        sens2 = 0;
+      }else{
+        sens2 = map(potValue2,0,1024,1,5);
+      }
+    }else if(conState2 == MAX){
+      sensor_activated = false;
+      maxDepres2 = map(potValue2,0,1023,0,179);
+      if(maxDepres2 < minDepres2){
+        maxDepres2 = minDepres2;
+      }
+      pos2 = maxDepres2;
+      servo2.write(pos2);
+      //delay(2);
+    }else if(conState2 == MIN){
+      sensor_activated = true;
+      minDepres2 = map(potValue2,0,1023,0,179);
+      if(minDepres2 > maxDepres2){
+        minDepres2 = maxDepres2;
+      }
+    }else if(conState2 == MAX_DURATION){
+      sensor_activated = true;
+      max_sustain_duration = map(potValue2,0,1023,0,MAX_DURATION_CUTOFF);
+	}
+    last_potValue2 = loc_potValue2;
+  }
+
+  loc_potValue3 = analogRead(potInput3);
+  //Serial.println(loc_potValue3);
+  if(abs(loc_potValue3 - last_potValue3) > POT_CHANGE){
+    potValue3 = loc_potValue3;
+    if(conState3 == SENS){
+      sensor_activated = true;
+      if(potValue3 < 5){
+        sens3 = 0;
+      }else{
+        sens3 = map(potValue3,0,1024,1,5);
+      }
+    }else if(conState3 == MAX){
+      sensor_activated = false;
+      maxDepres3 = map(potValue3,0,1023,0,179);
+      if(maxDepres3 < minDepres3){
+        maxDepres3 = minDepres3;
+      }
+      pos3 = maxDepres3;
+      servo3.write(pos3);
+      //delay(3);
+    }else if(conState3 == MIN){
+      sensor_activated = true;
+      minDepres3 = map(potValue3,0,1023,0,179);
+      if(minDepres3 > maxDepres3){
+        minDepres3 = maxDepres3;
+      }
+    }else if(conState3 == MAX_DURATION){
+      sensor_activated = true;
+      max_sustain_duration = map(potValue3,0,1023,0,MAX_DURATION_CUTOFF);
+	}
+    last_potValue3 = loc_potValue3;
+  }
 }
 
 void setup() {
@@ -286,8 +464,13 @@ void setup() {
   Serial.begin(115200);
 
   pinMode(buttonInput1,INPUT);
-  pinMode(ledStickOutput1,OUTPUT);
-  digitalWrite(ledStickOutput1,HIGH);
+  pinMode(buttonInput2,INPUT);
+  pinMode(buttonInput3,INPUT);
+
+
+
+  // pinMode(ledStickOutput1,OUTPUT);
+  // digitalWrite(ledStickOutput1,HIGH);
   servo1.attach(motorOutput1, 1000, 2000);
 
 
@@ -295,19 +478,34 @@ void setup() {
   delay(1000);
 
   attachInterrupt(digitalPinToInterrupt(buttonInput1), cycle_conState1, RISING);
+  attachInterrupt(digitalPinToInterrupt(buttonInput2), cycle_conState1, RISING);
+  attachInterrupt(digitalPinToInterrupt(buttonInput3), cycle_conState1, RISING);
+
 
   if (LEDStick1.begin() == false){
-    Serial.println("Qwiic LED Stick failed to begin. Please check wiring and try again!");
+    Serial.println("Qwiic LED Stick1 failed to begin. Please check wiring and try again!");
+    while(1);
+  }
+
+  if (LEDStick2.begin() == false){
+    Serial.println("Qwiic LED Stick1 failed to begin. Please check wiring and try again!");
+    while(1);
+  }
+
+  if (LEDStick3.begin() == false){
+    Serial.println("Qwiic LED Stick1 failed to begin. Please check wiring and try again!");
     while(1);
   }
 
   LEDStick1.setLEDBrightness(5);
+  LEDStick2.setLEDBrightness(5);
+  LEDStick3.setLEDBrightness(5);
   //led_stick(LEDStick1,MIN,0,9,0);
-  Serial.println("Qwiic LED Stick ready!");
+  Serial.println("Qwiic LED Sticks ready!");
 }
 
 void loop() {
-  get_sensor_inputs();
+  get_touch_sensor_inputs();
   get_pot_inputs();
 
 

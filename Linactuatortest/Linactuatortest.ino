@@ -4,7 +4,7 @@
 #define button 0
 
 int rotDirection = 0;
-int pressed = false;
+int pressed = false;A
 
 void setup() {
   pinMode(enA, OUTPUT);
