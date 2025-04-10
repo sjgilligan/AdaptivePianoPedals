@@ -39,9 +39,9 @@ Timer sustain_timer;
 // int ledStickOutput2 = 10;
 // int ledStickOutput3 = 10;
 
-int buttonInput1 = 0;
+int buttonInput1 = 2;
 int buttonInput2 = 1;
-int buttonInput3 = 2;
+int buttonInput3 = 0;
 int buttonState1 = LOW;
 int buttonState2 = LOW;
 int buttonState3 = LOW;
@@ -54,7 +54,8 @@ int potValue2 = 0;
 int potValue3 = 0;
 
 control_state_t conState1 = MIN;
-control_state_t last_conState1 = MIN;
+control_state_t conState2 = MIN;
+control_state_t conState3 = MIN;
 
 int sensorInput1 = 21;
 int sensorInput2 = 22;
@@ -72,19 +73,17 @@ int minDepres1 = 0;
 int minDepres2 = 0;
 int minDepres3 = 0;
 
-int sustain_duration = 1000;
-int max_sustain_duration = 4000;
-
 int sens1 = 1; //min 0, max 1024
 int sens2 = 1;
+int sens3 = 1;
 
 int pos1 = 0;
 int pos2 = 0;
 int pos3 = 0;
 
+int sustain_duration = 1000;
+int max_sustain_duration = 4000;
 sustain_state_t susState1 = WAITING;
-sustain_state_t susState1 = WAITING;
-
 
 bool sensor_activated = true;
 
@@ -333,8 +332,6 @@ void sustain_control(){
       
     }
   }
-
-
 }
 
 void get_touch_sensor_inputs(){
@@ -478,27 +475,27 @@ void setup() {
   delay(1000);
 
   attachInterrupt(digitalPinToInterrupt(buttonInput1), cycle_conState1, RISING);
-  attachInterrupt(digitalPinToInterrupt(buttonInput2), cycle_conState1, RISING);
-  attachInterrupt(digitalPinToInterrupt(buttonInput3), cycle_conState1, RISING);
+  attachInterrupt(digitalPinToInterrupt(buttonInput2), cycle_conState2, RISING);
+  attachInterrupt(digitalPinToInterrupt(buttonInput3), cycle_conState3, RISING);
 
 
-  if (LEDStick1.begin() == false){
+  if (LEDStick1.begin(0x25) == false){
     Serial.println("Qwiic LED Stick1 failed to begin. Please check wiring and try again!");
     while(1);
   }
 
-  if (LEDStick2.begin() == false){
-    Serial.println("Qwiic LED Stick1 failed to begin. Please check wiring and try again!");
-    while(1);
-  }
+  // if (LEDStick2.begin(0x24) == false){
+  //   Serial.println("Qwiic LED Stick2 failed to begin. Please check wiring and try again!");
+  //   while(1);
+  // }
 
-  if (LEDStick3.begin() == false){
-    Serial.println("Qwiic LED Stick1 failed to begin. Please check wiring and try again!");
+  if (LEDStick3.begin(0x23) == false){
+    Serial.println("Qwiic LED Stick3 failed to begin. Please check wiring and try again!");
     while(1);
   }
 
   LEDStick1.setLEDBrightness(5);
-  LEDStick2.setLEDBrightness(5);
+  //LEDStick2.setLEDBrightness(5);
   LEDStick3.setLEDBrightness(5);
   //led_stick(LEDStick1,MIN,0,9,0);
   Serial.println("Qwiic LED Sticks ready!");
@@ -506,10 +503,10 @@ void setup() {
 
 void loop() {
   get_touch_sensor_inputs();
+  get_imu_sensor_inputs();
+
   get_pot_inputs();
 
-
-  
   sustain_control();
   
   char buffer[120];
