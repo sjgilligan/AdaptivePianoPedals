@@ -93,7 +93,10 @@ int sustain_duration = 1000;
 int max_sustain_duration = 4000;
 sustain_state_t susState1 = WAITING;
 
-bool sensor_activated = true;
+bool sensor1_activated = true;
+bool sensor2_activated = true;
+bool sensor3_activated = true;
+
 
 void cycle_conState1(){
   static unsigned long last_interrupt_time = 0;
@@ -139,22 +142,22 @@ void cycle_conState2(){
   switch(conState2){
     case INIT:
       while(minDepres2 < map(potValue2,0,1023,0,179)){
-        servo1.write(minDepres2);
+        servo2.write(minDepres2);
       } 
       conState2 = MIN;
       break;
     case MIN:
       while(minDepres2 < map(potValue2,0,1023,0,179)){
-        servo1.write(minDepres2);
+        servo2.write(minDepres2);
       } 
       conState2 = MAX;
       break;
     case MAX:
-      servo1.write(minDepres2);
+      servo2.write(minDepres2);
       conState2 = MAX_DURATION;
       break;
     case MAX_DURATION:
-		  servo1.write(minDepres2);
+		  servo2.write(minDepres2);
 		  conState2 = SENS;
       break;
     default:
@@ -175,23 +178,19 @@ void cycle_conState3(){
   switch(conState3){
     case INIT:
       while(minDepres3 < map(potValue3,0,1023,0,179)){
-        servo1.write(minDepres3);
+        servo3.write(minDepres3);
       } 
       conState3 = MIN;
       break;
     case MIN:
       while(minDepres3 < map(potValue3,0,1023,0,179)){
-        servo1.write(minDepres3);
+        servo3.write(minDepres3);
       } 
       conState3 = MAX;
       break;
     case MAX:
-      servo1.write(minDepres3);
-      conState3 = MAX_DURATION;
-      break;
-    case MAX_DURATION:
-		  servo1.write(minDepres3);
-		  conState3 = SENS;
+      servo3.write(minDepres3);
+      conState3 = SENS;
       break;
     default:
       conState3 = MIN;
@@ -307,7 +306,7 @@ void led_stick(LED &led, control_state_t state, int min, int max, int duration, 
 
 void sustain_control(){
   int sustain_counter = 0;
-  if(sensor_activated == true){
+  if(sensor1_activated == true){
     if(susState1 == WAITING && sensorValue1 > 10){
       susState1 = INITIAL_PRESS; //wating -> inital_press
     }
@@ -350,10 +349,39 @@ void get_touch_sensor_inputs(){
   sensorValue2 = sensorValue2 * sens2;
 }
 
-void get_imu_sensor_inputs(){
+void imu_pedal_control() {
+  static bool pedal = false;
+  
   sensors_event_t a, g, temp;
   mpu.getEvent(&a, &g, &temp);
   accelZ = a.acceleration.z;
+  diff = accelZ - prevAccelz;
+
+  if (diff > 0.4 && !pedal) {
+    Serial.println("Shoulder raised - Pressing pedal.");
+    LEDStick3.LEDOff();
+    LEDStick3.setLEDColor(8, 124, 0, 0);
+    for (int pos = minDepres3; pos <= maxDepres3; pos += 10) {
+      servo3.write(pos);
+      delay(150);
+    }
+    pedal = true;
+    delay(1000);
+  }
+  else if (diff > 0.4 && pedal) {
+    Serial.println("Shoulder lowered - Releasing pedal.");
+    LEDStick3.LEDOff();
+    LEDStick3.setLEDColor(1, 0, 0, 124);
+    for (int pos = maxDepres3; pos >= minDepres3; pos -= 10) {
+      servo3.write(pos);
+      delay(150);
+    }
+    pedal = false;
+    delay(1000);
+  }
+
+  Serial.println(servo3.read());
+  prevAccelz = accelZ;
 }
 
 void get_pot_inputs(){
@@ -375,14 +403,14 @@ void get_pot_inputs(){
   if(abs(loc_potValue1 - last_potValue1) > POT_CHANGE){
     potValue1 = loc_potValue1;
     if(conState1 == SENS){
-      sensor_activated = true;
+      sensor1_activated = true;
       if(potValue1 < 5){
         sens1 = 0;
       }else{
         sens1 = map(potValue1,0,1024,1,5);
       }
     }else if(conState1 == MAX){
-      sensor_activated = false;
+      sensor1_activated = false;
       maxDepres1 = map(potValue1,0,1023,0,179);
       if(maxDepres1 < minDepres1){
         maxDepres1 = minDepres1;
@@ -391,13 +419,13 @@ void get_pot_inputs(){
       servo1.write(pos1);
       //delay(1);
     }else if(conState1 == MIN){
-      sensor_activated = true;
+      sensor1_activated = true;
       minDepres1 = map(potValue1,0,1023,0,179);
       if(minDepres1 > maxDepres1){
         minDepres1 = maxDepres1;
       }
     }else if(conState1 == MAX_DURATION){
-      sensor_activated = true;
+      sensor1_activated = true;
       max_sustain_duration = map(potValue1,0,1023,0,MAX_DURATION_CUTOFF);
 	}
     last_potValue1 = loc_potValue1;
@@ -408,14 +436,14 @@ void get_pot_inputs(){
   if(abs(loc_potValue2 - last_potValue2) > POT_CHANGE){
     potValue2 = loc_potValue2;
     if(conState2 == SENS){
-      sensor_activated = true;
+      sensor2_activated = true;
       if(potValue2 < 5){
         sens2 = 0;
       }else{
         sens2 = map(potValue2,0,1024,1,5);
       }
     }else if(conState2 == MAX){
-      sensor_activated = false;
+      sensor2_activated = false;
       maxDepres2 = map(potValue2,0,1023,0,179);
       if(maxDepres2 < minDepres2){
         maxDepres2 = minDepres2;
@@ -424,13 +452,13 @@ void get_pot_inputs(){
       servo2.write(pos2);
       //delay(2);
     }else if(conState2 == MIN){
-      sensor_activated = true;
+      sensor2_activated = true;
       minDepres2 = map(potValue2,0,1023,0,179);
       if(minDepres2 > maxDepres2){
         minDepres2 = maxDepres2;
       }
     }else if(conState2 == MAX_DURATION){
-      sensor_activated = true;
+      sensor2_activated = true;
       max_sustain_duration = map(potValue2,0,1023,0,MAX_DURATION_CUTOFF);
 	}
     last_potValue2 = loc_potValue2;
@@ -441,14 +469,14 @@ void get_pot_inputs(){
   if(abs(loc_potValue3 - last_potValue3) > POT_CHANGE){
     potValue3 = loc_potValue3;
     if(conState3 == SENS){
-      sensor_activated = true;
+      sensor3_activated = true;
       if(potValue3 < 5){
         sens3 = 0;
       }else{
         sens3 = map(potValue3,0,1024,1,5);
       }
     }else if(conState3 == MAX){
-      sensor_activated = false;
+      sensor3_activated = false;
       maxDepres3 = map(potValue3,0,1023,0,179);
       if(maxDepres3 < minDepres3){
         maxDepres3 = minDepres3;
@@ -457,13 +485,13 @@ void get_pot_inputs(){
       servo3.write(pos3);
       //delay(3);
     }else if(conState3 == MIN){
-      sensor_activated = true;
+      sensor3_activated = true;
       minDepres3 = map(potValue3,0,1023,0,179);
       if(minDepres3 > maxDepres3){
         minDepres3 = maxDepres3;
       }
     }else if(conState3 == MAX_DURATION){
-      sensor_activated = true;
+      sensor3_activated = true;
       max_sustain_duration = map(potValue3,0,1023,0,MAX_DURATION_CUTOFF);
 	}
     last_potValue3 = loc_potValue3;
@@ -483,9 +511,15 @@ void setup() {
   // pinMode(ledStickOutput1,OUTPUT);
   // digitalWrite(ledStickOutput1,HIGH);
   servo1.attach(motorOutput1, 1000, 2000);
+  servo2.attach(motorOutput2, 1000, 2000);
+  servo3.attach(motorOutput3, 1000, 2000);
 
 
   servo1.write(0);
+  delay(1000);
+  servo2.write(0);
+  delay(1000);
+  servo3.write(0);
   delay(1000);
 
   attachInterrupt(digitalPinToInterrupt(buttonInput1), cycle_conState1, RISING);
@@ -517,11 +551,11 @@ void setup() {
 
 void loop() {
   //get_touch_sensor_inputs();
-  //get_imu_sensor_inputs();
 
   get_pot_inputs();
 
   //sustain_control();
+  //imu_pedal_control();
 
   char buffer1[120];
   sprintf(buffer1,"Pedal1: min: %d, max: %d, sens: %d, pos: %d, pot: %d, con_state: %d, state: %d, sustain: %d",minDepres1,maxDepres1,sensorValue1,pos1,potValue1,conState1,susState1,sustain_duration);
@@ -537,7 +571,7 @@ void loop() {
 
   led_stick(LEDStick1,conState1,get_led_value(minDepres1,conState1),get_led_value(maxDepres1,conState1),get_led_value(max_sustain_duration,conState1),get_led_value(sensorValue1,conState1));
   //led_stick(LEDStick2,conState2,get_led_value(minDepres2,conState2),get_led_value(maxDepres2,conState2),get_led_value(max_sustain_duration,conState2),get_led_value(sensorValue1,conState2));
-  //led_stick(LEDStick1,conState3,get_led_value(minDepres3,conState3),get_led_value(maxDepres3,conState3),get_led_value(max_sustain_duration,conState3),get_led_value(sensorValue1,conState3));
+  led_stick(LEDStick3, conState3, get_led_value(minDepres3,conState3), get_led_value(maxDepres3,conState3), -1, -1);
 
   delay(10);
 }
