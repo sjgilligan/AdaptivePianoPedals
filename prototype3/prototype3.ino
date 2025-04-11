@@ -34,6 +34,13 @@ typedef enum
   MIN,
   MAX,
   SENS, //DO YOU NEED?
+} middle_control_state_t;
+
+typedef enum
+{
+  INIT,
+  MIN,
+  MAX,
 } quiet_control_state_t;
 
 PWMServo servo1;
@@ -567,13 +574,13 @@ void loop() {
   sprintf(buffer1,"Pedal1: min: %d, max: %d, sens: %d, pos: %d, pot: %d, con_state: %d, state: %d, sustain: %d",minDepres1,maxDepres1,sensorValue1,pos1,potValue1,conState1,susState1,sustain_duration);
   Serial.println(buffer1);
 
-  char buffer2[120];
-  sprintf(buffer2,"Pedal2: min: %d, max: %d, sens: %d, pos: %d, pot: %d, con_state: %d",minDepres2,maxDepres2,sensorValue2,pos2,potValue2,conState2);
-  Serial.println(buffer2);
+  // char buffer2[120];
+  // sprintf(buffer2,"Pedal2: min: %d, max: %d, sens: %d, pos: %d, pot: %d, con_state: %d",minDepres2,maxDepres2,sensorValue2,pos2,potValue2,conState2);
+  // Serial.println(buffer2);
 
-  char buffer3[120];
-  sprintf(buffer3,"Pedal3: min: %d, max: %d, sens: %f, pos: %d, pot: %d, con_state: %d",minDepres3,maxDepres3,diff,pos3,potValue3,conState3);
-  Serial.println(buffer3);
+  // char buffer3[120];
+  // sprintf(buffer3,"Pedal3: min: %d, max: %d, sens: %f, pos: %d, pot: %d, con_state: %d",minDepres3,maxDepres3,diff,pos3,potValue3,conState3);
+  // Serial.println(buffer3);
 
   //led_stick(LEDStick1,conState1,get_led_value(minDepres1,conState1),get_led_value(maxDepres1,conState1),get_led_value(max_sustain_duration,conState1),get_led_value(sensorValue1,conState1));
   //led_stick(LEDStick2,conState2,get_led_value(minDepres2,conState2),get_led_value(maxDepres2,conState2),get_led_value(max_sustain_duration,conState2),get_led_value(sensorValue1,conState2));
