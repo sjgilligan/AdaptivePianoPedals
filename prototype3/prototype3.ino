@@ -11,7 +11,7 @@
 
 #define INITIAL_THRESH 1 
 #define WAITING_THRESH 50
-#define TOGGLE_THRESH 600
+#define TOGGLE_THRESH 400
 #define POT_CHANGE 10
 #define MAX_DURATION_CUTOFF 10000
 
@@ -26,7 +26,15 @@ typedef enum
   MAX,
   MAX_DURATION,
   SENS,
-} control_state_t;
+} sustain_control_state_t;
+
+typedef enum
+{
+  INIT,
+  MIN,
+  MAX,
+  SENS, //DO YOU NEED?
+} quiet_control_state_t;
 
 PWMServo servo1;
 PWMServo servo2;
@@ -61,12 +69,12 @@ int potValue1 = 0;
 int potValue2 = 0;
 int potValue3 = 0;
 
-control_state_t conState1 = MIN;
+sustain_control_state_t conState1 = MIN;
 control_state_t conState2 = MIN;
 control_state_t conState3 = MIN;
 
-int sensorInput1 = 21;
-int sensorInput2 = 22;
+int sensorInput1 = 22;
+int sensorInput2 = 21;
 int sensorValue1 = 0;
 int sensorValue2 = 0;
 
@@ -305,7 +313,7 @@ void led_stick(LED &led, control_state_t state, int min, int max, int duration, 
 }
 
 void sustain_control(){
-  int sustain_counter = 0;
+  static int sustain_counter = 0;
   if(sensor1_activated == true){
     if(susState1 == WAITING && sensorValue1 > 10){
       susState1 = INITIAL_PRESS; //wating -> inital_press
@@ -325,18 +333,16 @@ void sustain_control(){
       susState1 = DEPRESS;
       pos1 = maxDepres1;
     }if(susState1 == DEPRESS && sustain_counter < sustain_duration){
-      do{
-        servo1.write(pos1);
-        sustain_counter++;
-        delay(1);
-      }while(sustain_counter < sustain_duration);
-      sustain_counter = 0;
+      servo1.write(pos1);
+      sustain_counter++;
+      Serial.print("Sustain counter: ");
+      Serial.println(sustain_counter);
+      
+    }else if(susState1 == DEPRESS && sustain_counter >= sustain_duration){
+	    sustain_counter = 0;
       susState1 = WAITING;
       servo1.write(minDepres1);
       pos1 = minDepres1;
-    }else if(susState1 == DEPRESS){
-	    //sustain_timer.stop();
-      
     }
   }
 }
@@ -527,30 +533,30 @@ void setup() {
   attachInterrupt(digitalPinToInterrupt(buttonInput3), cycle_conState3, RISING);
 
 
-  if (LEDStick1.begin(0x25) == false){
-    Serial.println("Qwiic LED Stick1 failed to begin. Please check wiring and try again!");
-    while(1);
-  }
+  // if (LEDStick1.begin(0x25) == false){
+  //   Serial.println("Qwiic LED Stick1 failed to begin. Please check wiring and try again!");
+  //   while(1);
+  // }
 
-  if (LEDStick2.begin(0x24) == false){
-    Serial.println("Qwiic LED Stick2 failed to begin. Please check wiring and try again!");
-    while(1);
-  }
+  // if (LEDStick2.begin(0x24) == false){
+  //   Serial.println("Qwiic LED Stick2 failed to begin. Please check wiring and try again!");
+  //   while(1);
+  // }
 
-  if (LEDStick3.begin(0x23) == false){
-    Serial.println("Qwiic LED Stick3 failed to begin. Please check wiring and try again!");
-    while(1);
-  }
+  // if (LEDStick3.begin(0x23) == false){
+  //   Serial.println("Qwiic LED Stick3 failed to begin. Please check wiring and try again!");
+  //   while(1);
+  // }
 
-  LEDStick1.setLEDBrightness(5);
-  LEDStick2.setLEDBrightness(5);
-  LEDStick3.setLEDBrightness(5);
+  // LEDStick1.setLEDBrightness(5);
+  // LEDStick2.setLEDBrightness(5);
+  // LEDStick3.setLEDBrightness(5);
   //led_stick(LEDStick1,MIN,0,9,0);
   Serial.println("Qwiic LED Sticks ready!");
 }
 
 void loop() {
-  //get_touch_sensor_inputs();
+  get_touch_sensor_inputs();
 
   get_pot_inputs();
 
@@ -569,9 +575,9 @@ void loop() {
   sprintf(buffer3,"Pedal3: min: %d, max: %d, sens: %f, pos: %d, pot: %d, con_state: %d",minDepres3,maxDepres3,diff,pos3,potValue3,conState3);
   Serial.println(buffer3);
 
-  led_stick(LEDStick1,conState1,get_led_value(minDepres1,conState1),get_led_value(maxDepres1,conState1),get_led_value(max_sustain_duration,conState1),get_led_value(sensorValue1,conState1));
+  //led_stick(LEDStick1,conState1,get_led_value(minDepres1,conState1),get_led_value(maxDepres1,conState1),get_led_value(max_sustain_duration,conState1),get_led_value(sensorValue1,conState1));
   //led_stick(LEDStick2,conState2,get_led_value(minDepres2,conState2),get_led_value(maxDepres2,conState2),get_led_value(max_sustain_duration,conState2),get_led_value(sensorValue1,conState2));
-  led_stick(LEDStick3, conState3, get_led_value(minDepres3,conState3), get_led_value(maxDepres3,conState3), -1, -1);
+  //led_stick(LEDStick3, conState3, get_led_value(minDepres3,conState3), get_led_value(maxDepres3,conState3), -1, -1);
 
   delay(10);
 }
