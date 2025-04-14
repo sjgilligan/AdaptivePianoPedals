@@ -21,11 +21,11 @@ typedef enum {
 
 typedef enum
 {
-  INIT,
-  MIN,
-  MAX,
-  MAX_DURATION,
-  SENS,
+  SUS_INIT,
+  SUS_MIN,
+  SUS_MAX,
+  SUS_MAX_DURATION,
+  SUS_SENS,
 } sustain_control_state_t;
 
 typedef enum
