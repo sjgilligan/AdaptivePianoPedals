@@ -13,6 +13,8 @@ int buttonInput3 = 3;
 int potInput1 = 14; //15
 int potInput2 = 15;
 int potInput3 = 16;
+int touchInput1 = 21;
+int touchInput2 = 22;
 
 void setup() {
   Serial.begin(115200);
@@ -29,7 +31,7 @@ void loop() {
 
 
   char buffer[120];
-  sprintf(buffer,"buttons: %d, %d, %d, pots: %d, %d, %d",digitalRead(3),digitalRead(2),digitalRead(1),analogRead(potInput1),analogRead(potInput2),analogRead(potInput3));
+  sprintf(buffer,"buttons: %d, %d, %d, pots: %d, %d, %d, touch: %d, %d",digitalRead(3),digitalRead(2),digitalRead(1),analogRead(potInput1),analogRead(potInput2),analogRead(potInput3),analogRead(touchInput1),analogRead(touchInput2));
   Serial.println(buffer);
   delay(10);
 }
