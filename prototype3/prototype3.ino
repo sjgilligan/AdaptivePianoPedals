@@ -28,21 +28,6 @@ typedef enum
   SUS_SENS,
 } sustain_control_state_t;
 
-typedef enum
-{
-  INIT,
-  MIN,
-  MAX,
-  SENS, //DO YOU NEED?
-} middle_control_state_t;
-
-typedef enum
-{
-  INIT,
-  MIN,
-  MAX,
-} quiet_control_state_t;
-
 PWMServo servo1;
 PWMServo servo2;
 PWMServo servo3;

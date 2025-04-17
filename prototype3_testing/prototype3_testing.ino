@@ -14,6 +14,7 @@
 #define TOGGLE_THRESH 400
 #define POT_CHANGE 10
 #define MAX_DURATION_CUTOFF 10000
+#define SUSTAIN_TRIGGER_THRESH 10 //should be 10-50
 
 typedef enum {
   WAITING,
@@ -91,10 +92,11 @@ int pos1 = 0;
 int pos2 = 0;
 int pos3 = 0;
 
-int sustain_duration = 1000;
+int sustain_window;
 int max_sustain_duration1 = 4000;
-int max_sustain_duration2 = 4000;
+//int max_sustain_duration2 = 4000;
 sustain_state_t susState1 = WAITING;
+int sustain_sensor_direction;
 
 bool sensor1_activated = true;
 bool sensor2_activated = true;
@@ -155,8 +157,8 @@ void cycle_conState2() {
         conState2 = MAX;
         break;
       case MAX:
-        servo2.write(minDepres2);
-        conState2 = MAX_DURATION;
+        //servo2.write(minDepres2);
+        conState2 = SENS;
         break;
       case MAX_DURATION:
         servo2.write(minDepres2);
@@ -212,7 +214,7 @@ int get_led_value(int input_value, int state) {
   if (state == SENS) {
     led_value = map(input_value, 0, 1023, 0, 9);
   } else if (state == MAX_DURATION) {
-    led_value = map(input_value, 0, 4000, 0, 9);
+    led_value = map(input_value, 0, MAX_DURATION_CUTOFF, 0, 9);
   } else {
 
     switch (input_value / 18) {
@@ -308,21 +310,22 @@ void led_stick(LED &led, control_state_t state, int min, int max, int duration, 
 void sustain_control() {
   static int sustain_counter = 0;
   if (sensor1_activated == true) {
-    if (susState1 == WAITING && sensorValue1 > 10) {
+    if (susState1 == WAITING && sensorValue1 > SUSTAIN_TRIGGER_THRESH && sustain_sensor_direction > 0) {
       susState1 = INITIAL_PRESS;  //wating -> inital_press
     }
 
-    if (susState1 == INITIAL_PRESS && sensorValue1 < 10) {
+    if (susState1 == INITIAL_PRESS && sensorValue1 < SUSTAIN_TRIGGER_THRESH) {
       susState1 = WAITING;  //initial_press -> waiting
     }
 
-    if (susState1 == INITIAL_PRESS && sensorValue1 > TOGGLE_THRESH) {
+    if (susState1 == INITIAL_PRESS && sensorValue1 > TOGGLE_THRESH sustain_sensor_direction > 0) {
+      
       susState1 = TOGGLE;  //initial_press -> toggle
     }
 
     if (susState1 == TOGGLE && sensorValue1 > TOGGLE_THRESH) {
       //delay(300);
-      sustain_duration = map(sensorValue1, TOGGLE_THRESH, 1023, 0, max_sustain_duration1);
+      sustain_duration = map(sensorValue1, TOGGLE_THRESH, 1023, , 9);
       susState1 = DEPRESS;
       pos1 = maxDepres1;
     }
@@ -341,11 +344,24 @@ void sustain_control() {
 }
 
 void get_touch_sensor_inputs() {
+  static int last_sensorValue1 = 0;
+
   sensorValue1 = analogRead(sensorInput1);
-  sensorValue1 = sensorValue1 * sens1;
+  if((sensorValue1 * sens1) < 1023){ //limit sensorValue1 to 1023
+    sensorValue1 = sensorValue1 * sens1;
+  }else{
+    sensorValue1 = 1023;
+  }
+
+  sustian_sensor_direction = sensorValue1 - last_sensorValue1;
+  last_sensorValue1 = sensorValue1;
 
   sensorValue2 = analogRead(sensorInput2);
-  sensorValue2 = sensorValue2 * sens2;
+  if((sensorValue2 * sens2) < 1023){ //limit sensorValue2 to 1023
+    sensorValue2 = sensorValue2 * sens2;
+  }else{
+    sensorValue2 = 1023;
+  }
 }
 
 void soft_control(int change) {
@@ -410,7 +426,7 @@ void get_pot_inputs() {
       }
     } else if (conState1 == MAX_DURATION) {
       sensor1_activated = true;
-      max_sustain_duration1 = map(potValue1, 0, 1023, 0, MAX_DURATION_CUTOFF);
+      sustian_window = map(potValue1, 0, 1023, 0, 9);
     }
     last_potValue1 = loc_potValue1;
   }
@@ -441,10 +457,10 @@ void get_pot_inputs() {
       if (minDepres2 > maxDepres2) {
         minDepres2 = maxDepres2;
       }
-    } else if (conState2 == MAX_DURATION) {
-      sensor2_activated = true;
-      max_sustain_duration2 = map(potValue2, 0, 1023, 0, MAX_DURATION_CUTOFF);
-    }
+    } //else if (conState2 == MAX_DURATION) {
+      //sensor2_activated = true;
+      //max_sustain_duration2 = map(potValue2, 0, 1023, 0, MAX_DURATION_CUTOFF);
+    //}
     last_potValue2 = loc_potValue2;
   }
 
@@ -570,20 +586,20 @@ void loop() {
   delay(10);
 
   char buffer1[120];
-  sprintf(buffer1, "Pedal1: min: %d, max: %d, sens: %d, pos: %d, pot: %d, con_state: %d, state: %d, sustain: %d", minDepres1, maxDepres1, sensorValue1, pos1, potValue1, conState1, susState1, sustain_duration);
+  sprintf(buffer1, "Pedal1: min: %d, max: %d, sens: %d, pos: %d, pot: %d, con_state: %d, state: %d, sustain: %d", minDepres1, maxDepres1, sensorValue1, pos1, potValue1, conState1, susState1, sustain_window);
   Serial.println(buffer1);
 
   char buffer2[120];
-  sprintf(buffer2, "Pedal2: min: %d, max: %d, sens: %d, pos: %d, pot: %d, con_state: %d", minDepres2, maxDepres2, sensorValue2, max_sustain_duration1, potValue2, conState2);
+  sprintf(buffer2, "Pedal2: min: %d, max: %d, sens: %d, pos: %d, pot: %d, con_state: %d", minDepres2, maxDepres2, sensorValue2, sustain_window, potValue2, conState2);
   Serial.println(buffer2);
 
   char buffer3[120];
-  sprintf(buffer3, "Pedal3: min: %d, max: %d, sens: %f, pos: %d, pot: %d, con_state: %d", minDepres3, maxDepres3, soft_pedal, pos3, potValue3, conState3);
+  sprintf(buffer3, "Pedal3: min: %d, max: %d, sens: %d, pos: %d, pot: %d, con_state: %d", minDepres3, maxDepres3, soft_pedal, pos3, potValue3, conState3);
   Serial.println(buffer3);
 
   led_stick(LEDStick1, conState1, get_led_value(minDepres1, conState1), get_led_value(maxDepres1, conState1), get_led_value(max_sustain_duration1, conState1), get_led_value(sensorValue1, conState1));
   led_stick(LEDStick2, conState2, get_led_value(minDepres2, conState2), get_led_value(maxDepres2, conState2), get_led_value(max_sustain_duration2, conState2), get_led_value(sensorValue2, conState2));
   led_stick(LEDStick3, conState3, get_led_value(minDepres3, conState3), get_led_value(maxDepres3, conState3), -1, sens3);
 
-  delay(100);
+  //delay(100);
 }

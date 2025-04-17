@@ -72,6 +72,9 @@ void loop() {
   LEDStick1.setLEDColor(50, 50, 50);
   LEDStick2.setLEDColor(50, 50, 50);
   LEDStick3.setLEDColor(50, 50, 50);
+  LEDStick1.setLEDBrightness(1);
+  LEDStick2.setLEDBrightness(1);
+  LEDStick3.setLEDBrightness(1);
   for(pos = 0; pos < 180; pos += 1) { // goes from 0 degrees to 180 degrees, 1 degree steps
     myservo1.write(pos);              // tell servo to go to position in variable 'pos'
     myservo2.write(pos);    
