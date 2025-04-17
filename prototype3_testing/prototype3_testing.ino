@@ -15,6 +15,7 @@
 #define POT_CHANGE 10
 #define MAX_DURATION_CUTOFF 10000
 #define SUSTAIN_TRIGGER_THRESH 10 //should be 10-50
+#define TOGGLE_CLIFF_RATE -50 //The dirivative that says the user has lifted their finger
 
 typedef enum {
   WAITING,
@@ -92,7 +93,7 @@ int pos1 = 0;
 int pos2 = 0;
 int pos3 = 0;
 
-int sustain_window;
+int sustain_window; //set with potentiometer, integers 0 to 9000, at 0 means 0ms - 1000s range of sustain, 1 means 1000ms to 2000ms range of sustain
 int max_sustain_duration1 = 4000;
 //int max_sustain_duration2 = 4000;
 sustain_state_t susState1 = WAITING;
@@ -297,7 +298,15 @@ void led_stick(LED &led, control_state_t state, int min, int max, int duration, 
         break;
       case SENS:
         led.LEDOff();
-        led.setLEDColor(sens, 0, 0, 124);
+        if(susState1 == 0){
+          led.setLEDColor(sens, 0, 0, 124);
+        }else if(susState1 == 1){
+          led.setLEDColor(sens, 0, 124, 0);
+        }else if(susState1 == 2){
+          led.setLEDColor(sens, 124, 0, 0);
+        }else if(susState1 == 3){
+          led.setLEDColor(sens, 124, 124, 124);
+        }
         break;
       default:
         led.LEDOff();
@@ -308,37 +317,48 @@ void led_stick(LED &led, control_state_t state, int min, int max, int duration, 
 }
 
 void sustain_control() {
-  static int sustain_counter = 0;
+  static long unsigned int sustain_duration = 0;
+  static long unsigned int start_time = 0;
+  static int peak_sensorValue1 = 0;
   if (sensor1_activated == true) {
-    if (susState1 == WAITING && sensorValue1 > SUSTAIN_TRIGGER_THRESH && sustain_sensor_direction > 0) {
+    if (susState1 == WAITING && sensorValue1 > SUSTAIN_TRIGGER_THRESH) { //user plays the key
       susState1 = INITIAL_PRESS;  //wating -> inital_press
     }
 
-    if (susState1 == INITIAL_PRESS && sensorValue1 < SUSTAIN_TRIGGER_THRESH) {
+    if (susState1 == INITIAL_PRESS && sensorValue1 < SUSTAIN_TRIGGER_THRESH) { //user releases before exceeding trigger threshold
       susState1 = WAITING;  //initial_press -> waiting
     }
 
-    if (susState1 == INITIAL_PRESS && sensorValue1 > TOGGLE_THRESH sustain_sensor_direction > 0) {
+    if (susState1 == INITIAL_PRESS && sensorValue1 > TOGGLE_THRESH) { //user exceeds trigger theshold
       
       susState1 = TOGGLE;  //initial_press -> toggle
     }
 
-    if (susState1 == TOGGLE && sensorValue1 > TOGGLE_THRESH) {
-      //delay(300);
-      sustain_duration = map(sensorValue1, TOGGLE_THRESH, 1023, , 9);
-      susState1 = DEPRESS;
-      pos1 = maxDepres1;
+    if (susState1 == TOGGLE && sensorValue1 > TOGGLE_THRESH && sustain_sensor_direction > TOGGLE_CLIFF_RATE) { //as long as they don't release record their peak value
+      if(sensorValue1 > peak_sensorValue1){
+        peak_sensorValue1 = sensorValue1; //get peak
+      }
     }
-    if (susState1 == DEPRESS && sustain_counter < sustain_duration) {
-      servo1.write(pos1);
-      sustain_counter++;
-      Serial.print("Sustain counter: ");
-      Serial.println(sustain_counter);
-    } else if (susState1 == DEPRESS && sustain_counter >= sustain_duration) {
-      sustain_counter = 0;
+
+    if (susState1 == TOGGLE && peak_sensorValue1 < SUSTAIN_TRIGGER_THRESH) { //need some sort of time out
       susState1 = WAITING;
-      servo1.write(minDepres1);
+    }
+
+    if (susState1 == TOGGLE && peak_sensorValue1 > TOGGLE_THRESH && sustain_sensor_direction < TOGGLE_CLIFF_RATE){ //they have released
+      sustain_duration = map(peak_sensorValue1,0,1023,sustain_window, sustain_window + 1000); //set sustain duration in range of sensor window
+      start_time = millis();
+      susState1 = DEPRESS;
+    }
+
+    if (susState1 == DEPRESS && ((millis() - start_time) < sustain_duration)) {
+      servo1.write(pos1);
+      Serial.print("Sustain counter: ");
+      Serial.println(millis());
+    } else if (susState1 == DEPRESS && ((millis() - start_time) >= sustain_duration)) {
+      sustain_duration = 0;
+      susState1 = WAITING;
       pos1 = minDepres1;
+      servo1.write(minDepres1);
     }
   }
 }
@@ -353,7 +373,7 @@ void get_touch_sensor_inputs() {
     sensorValue1 = 1023;
   }
 
-  sustian_sensor_direction = sensorValue1 - last_sensorValue1;
+  sustain_sensor_direction = sensorValue1 - last_sensorValue1;
   last_sensorValue1 = sensorValue1;
 
   sensorValue2 = analogRead(sensorInput2);
@@ -426,7 +446,7 @@ void get_pot_inputs() {
       }
     } else if (conState1 == MAX_DURATION) {
       sensor1_activated = true;
-      sustian_window = map(potValue1, 0, 1023, 0, 9);
+      sustain_window = map(potValue1, 0, 1023, 0, 9000);
     }
     last_potValue1 = loc_potValue1;
   }
@@ -547,7 +567,7 @@ void setup() {
 
   if (!mpu.begin()) {
     Serial.println("MPU6050 connection failed");
-    while (1) {
+    while (!mpu.begin()) {
       delay(10);
     }
   }
@@ -574,11 +594,11 @@ void loop() {
 
   sustain_control();
 
-  Serial.println(prevAccelz);
+  //Serial.println(prevAccelz);
 
   accelZ = get_imu();
   diff = accelZ - prevAccelz;
-  soft_control(diff);
+  //soft_control(diff);
 
   //Serial.println(servo3.read());
   prevAccelz = accelZ;
@@ -597,8 +617,8 @@ void loop() {
   sprintf(buffer3, "Pedal3: min: %d, max: %d, sens: %d, pos: %d, pot: %d, con_state: %d", minDepres3, maxDepres3, soft_pedal, pos3, potValue3, conState3);
   Serial.println(buffer3);
 
-  led_stick(LEDStick1, conState1, get_led_value(minDepres1, conState1), get_led_value(maxDepres1, conState1), get_led_value(max_sustain_duration1, conState1), get_led_value(sensorValue1, conState1));
-  led_stick(LEDStick2, conState2, get_led_value(minDepres2, conState2), get_led_value(maxDepres2, conState2), get_led_value(max_sustain_duration2, conState2), get_led_value(sensorValue2, conState2));
+  led_stick(LEDStick1, conState1, get_led_value(minDepres1, conState1), get_led_value(maxDepres1, conState1), get_led_value(sustain_window, conState1), get_led_value(sensorValue1, conState1));
+  led_stick(LEDStick2, conState2, get_led_value(minDepres2, conState2), get_led_value(maxDepres2, conState2), -1, get_led_value(sensorValue2, conState2));
   led_stick(LEDStick3, conState3, get_led_value(minDepres3, conState3), get_led_value(maxDepres3, conState3), -1, sens3);
 
   //delay(100);
