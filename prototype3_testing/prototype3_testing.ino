@@ -3,19 +3,18 @@
 #include <Arduino.h>
 #include <Adafruit_MPU6050.h>
 #include <Adafruit_Sensor.h>
-//#include "TeensyThreads.h"
 #include "Qwiic_LED_Stick.h"
 #include "Timer.h"
 
 #define SENS_COEF_1 200
 
 #define INITIAL_THRESH 1
-#define WAITING_THRESH 50
+#define WAITING_THRESH 30
 #define TOGGLE_THRESH 400
 #define POT_CHANGE 10
 #define MAX_DURATION_CUTOFF 10000
-#define SUSTAIN_TRIGGER_THRESH 10 //should be 10-50
-#define TOGGLE_CLIFF_RATE -50 //The dirivative that says the user has lifted their finger
+#define SUSTAIN_TRIGGER_THRESH 10  //should be 10-50
+#define TOGGLE_CLIFF_RATE -50
 
 typedef enum {
   WAITING,
@@ -47,10 +46,6 @@ float prevAccelz = 0.0;
 float accelZ;
 float diff;
 
-// int ledStickOutput1 = 10;
-// int ledStickOutput2 = 10;
-// int ledStickOutput3 = 10;
-
 int buttonInput1 = 3;
 int buttonInput2 = 2;
 int buttonInput3 = 1;
@@ -58,7 +53,7 @@ int buttonState1 = LOW;
 int buttonState2 = LOW;
 int buttonState3 = LOW;
 
-int potInput1 = 14;  //15
+int potInput1 = 14; 
 int potInput2 = 15;
 int potInput3 = 16;
 int potValue1 = 0;
@@ -75,8 +70,8 @@ int sensorValue1 = 0;
 int sensorValue2 = 0;
 
 int motorOutput1 = 10;
-int motorOutput2 = 11;
-int motorOutput3 = 12;
+int motorOutput2 = 12;
+int motorOutput3 = 11;
 
 int maxDepres1 = 179;
 int maxDepres2 = 179;
@@ -85,7 +80,7 @@ int minDepres1 = 0;
 int minDepres2 = 0;
 int minDepres3 = 0;
 
-int sens1 = 1;  //min 0, max 1024
+int sens1 = 1;
 int sens2 = 1;
 int sens3 = 1;
 
@@ -93,9 +88,9 @@ int pos1 = 0;
 int pos2 = 0;
 int pos3 = 0;
 
-int sustain_window; //set with potentiometer, integers 0 to 9000, at 0 means 0ms - 1000s range of sustain, 1 means 1000ms to 2000ms range of sustain
+int sustain_window;
 int max_sustain_duration1 = 4000;
-//int max_sustain_duration2 = 4000;
+int max_sustain_duration2 = 4000;
 sustain_state_t susState1 = WAITING;
 int sustain_sensor_direction;
 
@@ -136,8 +131,6 @@ void cycle_conState1() {
     }
   }
   last_interrupt_time = interrupt_time;
-
-  //delay(1000);
 }
 
 void cycle_conState2() {
@@ -158,7 +151,7 @@ void cycle_conState2() {
         conState2 = MAX;
         break;
       case MAX:
-        //servo2.write(minDepres2);
+        servo2.write(minDepres2);
         conState2 = SENS;
         break;
       case MAX_DURATION:
@@ -171,8 +164,6 @@ void cycle_conState2() {
     }
   }
   last_interrupt_time = interrupt_time;
-  //led_stick(LEDStick1,conState1,ledValue1);
-  //delay(1000);
 }
 
 void cycle_conState3() {
@@ -202,12 +193,7 @@ void cycle_conState3() {
     }
   }
   last_interrupt_time = interrupt_time;
-  //led_stick(LEDStick1,conState1,ledValue1);
-  //delay(1000);
 }
-
-
-
 
 int get_led_value(int input_value, int state) {
   int led_value;
@@ -274,23 +260,13 @@ void led_stick(LED &led, control_state_t state, int min, int max, int duration, 
     switch (state) {
       case MIN:
         led.LEDOff();
-
         led.setLEDColor(max, 0, 124, 0);
         led.setLEDColor(min, 124, 0, 0);
-        // Serial.print("MIN ");
-        // Serial.print(min);
-        // Serial.print("MAX ");
-        // Serial.println(max);
         break;
       case MAX:
         led.LEDOff();
-
         led.setLEDColor(max, 0, 124, 0);
         led.setLEDColor(min, 124, 0, 0);
-        // Serial.print("MIN ");
-        // Serial.print(min);
-        // Serial.print("MAX ");
-        // Serial.println(max);
         break;
       case MAX_DURATION:
         led.LEDOff();
@@ -298,13 +274,15 @@ void led_stick(LED &led, control_state_t state, int min, int max, int duration, 
         break;
       case SENS:
         led.LEDOff();
-        if(susState1 == 0){
+        if (duration == -1) {
           led.setLEDColor(sens, 0, 0, 124);
-        }else if(susState1 == 1){
+        } else if (susState1 == 0) {
+          led.setLEDColor(sens, 0, 0, 124);
+        } else if (susState1 == 1) {
           led.setLEDColor(sens, 0, 124, 0);
-        }else if(susState1 == 2){
+        } else if (susState1 == 2) {
           led.setLEDColor(sens, 124, 0, 0);
-        }else if(susState1 == 3){
+        } else if (susState1 == 3) {
           led.setLEDColor(sens, 124, 124, 124);
         }
         break;
@@ -321,36 +299,37 @@ void sustain_control() {
   static long unsigned int start_time = 0;
   static int peak_sensorValue1 = 0;
   if (sensor1_activated == true) {
-    if (susState1 == WAITING && sensorValue1 > SUSTAIN_TRIGGER_THRESH) { //user plays the key
-      susState1 = INITIAL_PRESS;  //wating -> inital_press
+    if (susState1 == WAITING && sensorValue1 > SUSTAIN_TRIGGER_THRESH) {  //user plays the key
+      susState1 = INITIAL_PRESS;                                          //wating -> inital_press
     }
 
-    if (susState1 == INITIAL_PRESS && sensorValue1 < SUSTAIN_TRIGGER_THRESH) { //user releases before exceeding trigger threshold
-      susState1 = WAITING;  //initial_press -> waiting
+    if (susState1 == INITIAL_PRESS && sensorValue1 < SUSTAIN_TRIGGER_THRESH) {  //user releases before exceeding trigger threshold
+      susState1 = WAITING;                                                      //initial_press -> waiting
     }
 
-    if (susState1 == INITIAL_PRESS && sensorValue1 > TOGGLE_THRESH) { //user exceeds trigger theshold
-      
+    if (susState1 == INITIAL_PRESS && sensorValue1 > TOGGLE_THRESH) {  //user exceeds trigger theshold
+
       susState1 = TOGGLE;  //initial_press -> toggle
     }
 
-    if (susState1 == TOGGLE && sensorValue1 > TOGGLE_THRESH && sustain_sensor_direction > TOGGLE_CLIFF_RATE) { //as long as they don't release record their peak value
-      if(sensorValue1 > peak_sensorValue1){
-        peak_sensorValue1 = sensorValue1; //get peak
+    if (susState1 == TOGGLE && sensorValue1 > TOGGLE_THRESH && sustain_sensor_direction > TOGGLE_CLIFF_RATE) {  //as long as they don't release record their peak value
+      if (sensorValue1 > peak_sensorValue1) {
+        peak_sensorValue1 = sensorValue1;  //get peak
       }
     }
 
-    if (susState1 == TOGGLE && peak_sensorValue1 < SUSTAIN_TRIGGER_THRESH) { //need some sort of time out
+    if (susState1 == TOGGLE && peak_sensorValue1 < SUSTAIN_TRIGGER_THRESH) {  //need some sort of time out
       susState1 = WAITING;
     }
 
-    if (susState1 == TOGGLE && peak_sensorValue1 > TOGGLE_THRESH && sustain_sensor_direction < TOGGLE_CLIFF_RATE){ //they have released
-      sustain_duration = map(peak_sensorValue1,0,1023,sustain_window, sustain_window + 1000); //set sustain duration in range of sensor window
+    if (susState1 == TOGGLE && peak_sensorValue1 > TOGGLE_THRESH && sustain_sensor_direction < TOGGLE_CLIFF_RATE) {  //they have released
+      sustain_duration = map(peak_sensorValue1, 0, 1023, sustain_window, sustain_window + 1000);                     //set sustain duration in range of sensor window
       start_time = millis();
       susState1 = DEPRESS;
     }
 
     if (susState1 == DEPRESS && ((millis() - start_time) < sustain_duration)) {
+      pos1 = maxDepres1;
       servo1.write(pos1);
       Serial.print("Sustain counter: ");
       Serial.println(millis());
@@ -367,9 +346,9 @@ void get_touch_sensor_inputs() {
   static int last_sensorValue1 = 0;
 
   sensorValue1 = analogRead(sensorInput1);
-  if((sensorValue1 * sens1) < 1023){ //limit sensorValue1 to 1023
+  if ((sensorValue1 * sens1) < 1023) {  //limit sensorValue1 to 1023
     sensorValue1 = sensorValue1 * sens1;
-  }else{
+  } else {
     sensorValue1 = 1023;
   }
 
@@ -377,24 +356,22 @@ void get_touch_sensor_inputs() {
   last_sensorValue1 = sensorValue1;
 
   sensorValue2 = analogRead(sensorInput2);
-  if((sensorValue2 * sens2) < 1023){ //limit sensorValue2 to 1023
+  if ((sensorValue2 * sens2) < 1023) {  //limit sensorValue2 to 1023
     sensorValue2 = sensorValue2 * sens2;
-  }else{
+  } else {
     sensorValue2 = 1023;
   }
 }
 
 void soft_control(int change) {
-  if (change > 0.4 && !soft_pedal) {
-    Serial.println("Shoulder raised - Pressing pedal.");
+  if (change > 0.5 && !soft_pedal) {
     for (int pos = minDepres3; pos <= maxDepres3; pos += 10) {
       servo3.write(pos);
       delay(100);
     }
     soft_pedal = true;
     delay(1000);
-  } else if (change > 0.4 && soft_pedal) {
-    Serial.println("Shoulder lowered - Releasing pedal.");
+  } else if (change > 0.5 && soft_pedal) {
     for (int pos = maxDepres3; pos >= minDepres3; pos -= 10) {
       servo3.write(pos);
       delay(100);
@@ -405,21 +382,14 @@ void soft_control(int change) {
 }
 
 void get_pot_inputs() {
-  // static int old_sens1 = 1;
-  // static int old_maxDepres1 = 179;
-  // static int old_minDepres1 = 0;
-
   static int last_potValue1;
   int loc_potValue1;
-
   static int last_potValue2;
   int loc_potValue2;
-
   static int last_potValue3;
   int loc_potValue3;
 
   loc_potValue1 = analogRead(potInput1);
-  //Serial.println(loc_potValue1);
   if (abs(loc_potValue1 - last_potValue1) > POT_CHANGE) {
     potValue1 = loc_potValue1;
     if (conState1 == SENS) {
@@ -437,7 +407,6 @@ void get_pot_inputs() {
       }
       pos1 = maxDepres1;
       servo1.write(pos1);
-      //delay(1);
     } else if (conState1 == MIN) {
       sensor1_activated = true;
       minDepres1 = map(potValue1, 0, 1023, 0, 179);
@@ -452,7 +421,6 @@ void get_pot_inputs() {
   }
 
   loc_potValue2 = analogRead(potInput2);
-  //Serial.println(loc_potValue2);
   if (abs(loc_potValue2 - last_potValue2) > POT_CHANGE) {
     potValue2 = loc_potValue2;
     if (conState2 == SENS) {
@@ -470,22 +438,17 @@ void get_pot_inputs() {
       }
       pos2 = maxDepres2;
       servo2.write(pos2);
-      //delay(2);
     } else if (conState2 == MIN) {
       sensor2_activated = true;
       minDepres2 = map(potValue2, 0, 1023, 0, 179);
       if (minDepres2 > maxDepres2) {
         minDepres2 = maxDepres2;
       }
-    } //else if (conState2 == MAX_DURATION) {
-      //sensor2_activated = true;
-      //max_sustain_duration2 = map(potValue2, 0, 1023, 0, MAX_DURATION_CUTOFF);
-    //}
+    }
     last_potValue2 = loc_potValue2;
   }
 
   loc_potValue3 = analogRead(potInput3);
-  //Serial.println(loc_potValue3);
   if (abs(loc_potValue3 - last_potValue3) > POT_CHANGE) {
     potValue3 = loc_potValue3;
     if (conState3 == SENS) {
@@ -501,7 +464,6 @@ void get_pot_inputs() {
       }
       pos3 = maxDepres3;
       servo3.write(pos3);
-      //delay(3);
     } else if (conState3 == MIN) {
       minDepres3 = map(potValue3, 0, 1023, 0, 179);
       if (minDepres3 > maxDepres3) {
@@ -526,14 +488,9 @@ void setup() {
   pinMode(buttonInput2, INPUT);
   pinMode(buttonInput3, INPUT);
 
-
-
-  // pinMode(ledStickOutput1,OUTPUT);
-  // digitalWrite(ledStickOutput1,HIGH);
   servo1.attach(motorOutput1, 1000, 2000);
   servo2.attach(motorOutput2, 1000, 2000);
   servo3.attach(motorOutput3, 1000, 2000);
-
 
   servo1.write(0);
   delay(1000);
@@ -545,7 +502,6 @@ void setup() {
   attachInterrupt(digitalPinToInterrupt(buttonInput1), cycle_conState1, RISING);
   attachInterrupt(digitalPinToInterrupt(buttonInput2), cycle_conState2, RISING);
   attachInterrupt(digitalPinToInterrupt(buttonInput3), cycle_conState3, RISING);
-
 
   if (LEDStick1.begin(0x25) == false) {
     Serial.println("Qwiic LED Stick1 failed to begin. Please check wiring and try again!");
@@ -568,9 +524,11 @@ void setup() {
   if (!mpu.begin()) {
     Serial.println("MPU6050 connection failed");
     while (!mpu.begin()) {
+      LEDStick3.setLEDColor(124, 0, 0);
       delay(10);
     }
   }
+  Serial.println("MPU6050 connected");
   Serial.println("MPU6050 connected");
 
   mpu.setAccelerometerRange(MPU6050_RANGE_4_G);
@@ -583,7 +541,7 @@ void setup() {
   LEDStick1.setLEDBrightness(5);
   LEDStick2.setLEDBrightness(5);
   LEDStick3.setLEDBrightness(5);
-  //led_stick(LEDStick1,MIN,0,9,0);
+
   Serial.println("Qwiic LED Sticks ready!");
 }
 
@@ -594,13 +552,11 @@ void loop() {
 
   sustain_control();
 
-  //Serial.println(prevAccelz);
-
   accelZ = get_imu();
   diff = accelZ - prevAccelz;
-  //soft_control(diff);
-
-  //Serial.println(servo3.read());
+  if (conState3 == SENS) {
+    soft_control(diff);
+  }
   prevAccelz = accelZ;
 
   delay(10);
@@ -620,6 +576,4 @@ void loop() {
   led_stick(LEDStick1, conState1, get_led_value(minDepres1, conState1), get_led_value(maxDepres1, conState1), get_led_value(sustain_window, conState1), get_led_value(sensorValue1, conState1));
   led_stick(LEDStick2, conState2, get_led_value(minDepres2, conState2), get_led_value(maxDepres2, conState2), -1, get_led_value(sensorValue2, conState2));
   led_stick(LEDStick3, conState3, get_led_value(minDepres3, conState3), get_led_value(maxDepres3, conState3), -1, sens3);
-
-  //delay(100);
 }
