@@ -1,0 +1,12 @@
+Guitar box CAD:
+https://cad.onshape.com/documents/05b4c4fec8ef5d07fd03a100/w/8a8337e33c595048353c6fde/e/8804278a1c048bf522602866?renderMode=0&uiState=680ea9e7f56ff8293d268fdc
+
+Linear Servo Datasheet:
+https://www.actuonix.com/assets/images/datasheets/ActuonixP16Datasheet.pdf
+
+Actuator that’s getting replaced (I couldn’t find a datasheet lol):
+https://www.amazon.com/Electric-Linear-Actuator-Industrial-Bracket/dp/B0C4VV53K4/ref=cm_cr_arp_d_product_top?ie=UTF8
+
+Main Stand Cad model - https://cad.onshape.com/documents/f4f4970fa5d7ba077186925d/w/e00380dbbfaa822a59c57e06/e/69fd7590a5906c22c151f43a?renderMode=0&uiState=6810347a5fc719499f34c3f4
+
+3-d printed bottom for electrical box - https://cad.onshape.com/documents/67cbd4a04dd4b348fef40878/w/0d3e133c9eec2096dd0462a9/e/828d10d2cb4de5b7cffa4580?renderMode=0&uiState=681034bdadaee6458d996718
